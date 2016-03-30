@@ -348,7 +348,7 @@ namespace Microsoft.CodeAnalysis.UnitTests
 
             ProjectId projectId = ProjectId.CreateNewId(debugName: TestProjectName);
 
-            Solution solution = (addToSolution ?? new AdhocWorkspace().CurrentSolution)
+            Project project = (addToSolution ?? new AdhocWorkspace().CurrentSolution)
                 .AddProject(projectId, TestProjectName, TestProjectName, language)
                 .AddMetadataReference(projectId, s_corlibReference)
                 .AddMetadataReference(projectId, s_systemCoreReference)
@@ -366,14 +366,17 @@ namespace Microsoft.CodeAnalysis.UnitTests
                 .AddMetadataReference(projectId, s_workspacesReference)
                 .AddMetadataReference(projectId, s_systemDiagnosticsDebugReference)
                 .AddMetadataReference(projectId, s_systemDataReference)
-                .WithProjectCompilationOptions(projectId, options);
+                .WithProjectCompilationOptions(projectId, options)
+                .GetProject(projectId);
+
+            // Enable IOperation Feature on the project
+            var parseOptions = project.ParseOptions.WithFeatures(project.ParseOptions.Features.Concat(SpecializedCollections.SingletonEnumerable(KeyValuePair.Create("IOperation", "true"))));
+            project = project.WithParseOptions(parseOptions);
 
             if (addLanguageSpecificCodeAnalysisReference)
             {
                 MetadataReference symbolsReference = language == LanguageNames.CSharp ? s_CSharpSymbolsReference : s_visualBasicSymbolsReference;
-                Project project = solution.GetProject(projectId);
                 project = project.AddMetadataReference(symbolsReference);
-                solution = project.Solution;
             }
 
             int count = 0;
@@ -381,10 +384,10 @@ namespace Microsoft.CodeAnalysis.UnitTests
             {
                 string newFileName = source.FilePath ?? fileNamePrefix + count++ + "." + fileExt;
                 DocumentId documentId = DocumentId.CreateNewId(projectId, debugName: newFileName);
-                solution = solution.AddDocument(documentId, newFileName, SourceText.From(source.Source));
+                project = project.AddDocument(newFileName, SourceText.From(source.Source)).Project;
             }
 
-            return solution.GetProject(projectId);
+            return project;
         }
 
         protected static Diagnostic[] GetSortedDiagnostics(DiagnosticAnalyzer analyzer, Document document, TextSpan?[] spans = null)
