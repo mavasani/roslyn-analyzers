@@ -19,18 +19,18 @@ namespace Test.Utilities
 {
     public abstract class DiagnosticAnalyzerTestBase
     {
-        private static readonly MetadataReference s_corlibReference = MetadataReference.CreateFromAssemblyInternal(typeof(object).Assembly);
-        private static readonly MetadataReference s_systemCoreReference = MetadataReference.CreateFromAssemblyInternal(typeof(Enumerable).Assembly);
-        private static readonly MetadataReference s_systemXmlReference = MetadataReference.CreateFromAssemblyInternal(typeof(System.Xml.XmlDocument).Assembly);
-        private static readonly MetadataReference s_systemXmlDataReference = MetadataReference.CreateFromAssemblyInternal(typeof(System.Data.Rule).Assembly);
-        private static readonly MetadataReference s_csharpSymbolsReference = MetadataReference.CreateFromAssemblyInternal(typeof(CSharpCompilation).Assembly);
-        private static readonly MetadataReference s_visualBasicSymbolsReference = MetadataReference.CreateFromAssemblyInternal(typeof(VisualBasicCompilation).Assembly);
-        private static readonly MetadataReference s_visualBasicReference = MetadataReference.CreateFromAssemblyInternal(typeof(ComputerInfo).Assembly);
-        private static readonly MetadataReference s_codeAnalysisReference = MetadataReference.CreateFromAssemblyInternal(typeof(Compilation).Assembly);
-        private static readonly MetadataReference s_workspacesReference = MetadataReference.CreateFromAssemblyInternal(typeof(Workspace).Assembly);
-        private static readonly MetadataReference s_immutableCollectionsReference = MetadataReference.CreateFromAssemblyInternal(typeof(ImmutableArray<int>).Assembly);
-        private static readonly MetadataReference s_systemDiagnosticsDebugReference = MetadataReference.CreateFromAssemblyInternal(typeof(System.Diagnostics.Debug).Assembly);
-        private static readonly MetadataReference s_systemDataReference = MetadataReference.CreateFromAssemblyInternal(typeof(System.Data.DataSet).Assembly);
+        private static readonly MetadataReference s_corlibReference = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
+        private static readonly MetadataReference s_systemCoreReference = MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location);
+        private static readonly MetadataReference s_systemXmlReference = MetadataReference.CreateFromFile(typeof(System.Xml.XmlDocument).Assembly.Location);
+        private static readonly MetadataReference s_systemXmlDataReference = MetadataReference.CreateFromFile(typeof(System.Data.Rule).Assembly.Location);
+        private static readonly MetadataReference s_csharpSymbolsReference = MetadataReference.CreateFromFile(typeof(CSharpCompilation).Assembly.Location);
+        private static readonly MetadataReference s_visualBasicSymbolsReference = MetadataReference.CreateFromFile(typeof(VisualBasicCompilation).Assembly.Location);
+        private static readonly MetadataReference s_visualBasicReference = MetadataReference.CreateFromFile(typeof(ComputerInfo).Assembly.Location);
+        private static readonly MetadataReference s_codeAnalysisReference = MetadataReference.CreateFromFile(typeof(Compilation).Assembly.Location);
+        private static readonly MetadataReference s_workspacesReference = MetadataReference.CreateFromFile(typeof(Workspace).Assembly.Location);
+        private static readonly MetadataReference s_immutableCollectionsReference = MetadataReference.CreateFromFile(typeof(ImmutableArray<int>).Assembly.Location);
+        private static readonly MetadataReference s_systemDiagnosticsDebugReference = MetadataReference.CreateFromFile(typeof(System.Diagnostics.Debug).Assembly.Location);
+        private static readonly MetadataReference s_systemDataReference = MetadataReference.CreateFromFile(typeof(System.Data.DataSet).Assembly.Location);
         private static readonly CompilationOptions s_CSharpDefaultOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary);
         private static readonly CompilationOptions s_CSharpUnsafeCodeDefaultOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary).WithAllowUnsafe(true);
         private static readonly CompilationOptions s_visualBasicDefaultOptions = new VisualBasicCompilationOptions(OutputKind.DynamicallyLinkedLibrary);
@@ -401,7 +401,7 @@ namespace Test.Utilities
         {
             if (analyzerOpt == null)
             {
-                return SpecializedCollections.EmptyArray<Diagnostic>();
+                return Array.Empty<Diagnostic>();
             }
 
             var projects = new HashSet<Project>();

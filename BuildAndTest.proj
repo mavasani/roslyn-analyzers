@@ -23,8 +23,10 @@
   </PropertyGroup>
 
   <Target Name="RestorePackages">
-    <Exec Command="&quot;$(NuGetExe)&quot; install xunit.runner.console -version 2.1.0 -OutputDirectory &quot;$(NuGetPackageRoot)&quot;"/>
-    <Exec Command="&quot;$(NuGetExe)&quot; restore &quot;$(SolutionFile)&quot;" />
+    <MSBuild BuildInParallel="true"
+             Projects="$(SolutionFile)"
+             Properties="RestorePackages=true"
+             Targets="Restore"/>
   </Target>
 
   <Target Name="Build" DependsOnTargets="RestorePackages">
