@@ -2,6 +2,7 @@
 
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Semantics;
@@ -14,6 +15,8 @@ namespace System.Threading.Tasks.Analyzers
     [DiagnosticAnalyzer(LanguageNames.CSharp, LanguageNames.VisualBasic)]
     public sealed class DoNotCreateTasksWithoutPassingATaskSchedulerAnalyzer : DiagnosticAnalyzer
     {
+        private static MethodInfo s_registerMethod = typeof(CompilationStartAnalysisContext).GetTypeInfo().GetDeclaredMethod("RegisterOperationActionImmutableArrayInternal");
+
         internal const string RuleId = "RS0018";
 
         private static readonly LocalizableString s_localizableTitle = new LocalizableResourceString(nameof(SystemThreadingTasksAnalyzersResources.DoNotCreateTasksWithoutPassingATaskSchedulerTitle), SystemThreadingTasksAnalyzersResources.ResourceManager, typeof(SystemThreadingTasksAnalyzersResources));
@@ -49,47 +52,67 @@ namespace System.Threading.Tasks.Analyzers
                     return;
                 }
 
-                compilationContext.RegisterOperationAction(operationContext =>
+                var analyzer = new CompilationAnalyzer(taskType, taskFactoryType, taskSchedulerType);
+                s_registerMethod.Invoke(compilationContext, new object[]
                 {
-                    var invocation = (IInvocationExpression)operationContext.Operation;
-                    if (invocation.IsInvalid)
-                    {
-                        return;
-                    }
-
-                    if (!IsMethodOfInterest(invocation.TargetMethod, taskType, taskFactoryType))
-                    {
-                        return;
-                    }
-
-                    // We want to ensure that all overloads called are explicitly taking a task scheduler
-                    if (invocation.TargetMethod.Parameters.Any(p => p.Type.Equals(taskSchedulerType)))
-                    {
-                        return;
-                    }
-
-                    operationContext.ReportDiagnostic(Diagnostic.Create(Rule, invocation.Syntax.GetLocation(), invocation.TargetMethod.Name));
-                }, OperationKind.InvocationExpression);
+                    new Action<OperationAnalysisContext>(analyzer.AnalyzeOperation),
+                    ImmutableArray.Create(OperationKind.InvocationExpression)
+                });
             });
         }
 
-        private static bool IsMethodOfInterest(IMethodSymbol methodSymbol, INamedTypeSymbol taskType, INamedTypeSymbol taskFactoryType)
+        private class CompilationAnalyzer
         {
-            // Check if it's a method of Task or a derived type (for Task<T>)
-            if ((taskType.Equals(methodSymbol.ContainingType) ||
-                 taskType.Equals(methodSymbol.ContainingType.BaseType)) &&
-                methodSymbol.Name == "ContinueWith")
+            private readonly INamedTypeSymbol _taskType;
+            private readonly INamedTypeSymbol _taskFactoryType;
+            private readonly INamedTypeSymbol _taskSchedulerType;
+            public CompilationAnalyzer(INamedTypeSymbol taskType, INamedTypeSymbol taskFactoryType, INamedTypeSymbol taskSchedulerType)
             {
-                return true;
+                _taskType = taskType;
+                _taskFactoryType = taskFactoryType;
+                _taskSchedulerType = taskSchedulerType;
             }
 
-            if (methodSymbol.ContainingType.Equals(taskFactoryType) &&
-                methodSymbol.Name == "StartNew")
+            public void AnalyzeOperation(OperationAnalysisContext operationContext)
             {
-                return true;
+                var invocation = (IInvocationExpression)operationContext.Operation;
+                if (invocation.IsInvalid)
+                {
+                    return;
+                }
+
+                if (!IsMethodOfInterest(invocation.TargetMethod))
+                {
+                    return;
+                }
+
+                // We want to ensure that all overloads called are explicitly taking a task scheduler
+                if (invocation.TargetMethod.Parameters.Any(p => p.Type.Equals(_taskSchedulerType)))
+                {
+                    return;
+                }
+
+                operationContext.ReportDiagnostic(Diagnostic.Create(Rule, invocation.Syntax.GetLocation(), invocation.TargetMethod.Name));
             }
 
-            return false;
+            private bool IsMethodOfInterest(IMethodSymbol methodSymbol)
+            {
+                // Check if it's a method of Task or a derived type (for Task<T>)
+                if ((_taskType.Equals(methodSymbol.ContainingType) ||
+                     _taskType.Equals(methodSymbol.ContainingType.BaseType)) &&
+                    methodSymbol.Name == "ContinueWith")
+                {
+                    return true;
+                }
+
+                if (methodSymbol.ContainingType.Equals(_taskFactoryType) &&
+                    methodSymbol.Name == "StartNew")
+                {
+                    return true;
+                }
+
+                return false;
+            }
         }
     }
 }
