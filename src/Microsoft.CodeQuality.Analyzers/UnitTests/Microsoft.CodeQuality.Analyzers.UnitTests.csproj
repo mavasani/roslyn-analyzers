@@ -4,7 +4,7 @@
     <Import Project="..\..\..\build\Targets\Analyzers.Settings.targets" />
   </ImportGroup>
   <PropertyGroup>
-    <TargetFramework>net46</TargetFramework>
+    <TargetFramework>net462</TargetFramework>
     <TestProject>true</TestProject>
     <RootNamespace>Microsoft.CodeQuality.Analyzers.UnitTests</RootNamespace>
     <AssemblyName>Microsoft.CodeQuality.Analyzers.UnitTests</AssemblyName>

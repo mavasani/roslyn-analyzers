@@ -11,6 +11,9 @@ namespace Analyzer.Utilities
 {
     public static class AnalysisContextExtensions
     {
+        // private const string IOperationApiMinVersion = "15.3";
+        // private const string IOperationApiMaxVersion = "15.5";
+
 #if USE_INTERNAL_IOPERATION_APIS
         // By pass the IOperation feature flag check if building analyzers VSIX.
         private const string RegisterOperationActionMethodName = "RegisterOperationActionImmutableArrayInternal";
@@ -46,6 +49,12 @@ namespace Analyzer.Utilities
         private static MethodInfo s_getOperationOnSemanticModel =
             typeof(SemanticModel).GetTypeInfo().GetDeclaredMethod(GetOperationMethodName);
 #endif
+
+        private static bool ShouldRunIOperationAnalyzers()
+        {return true;
+            
+           // var assembly = AssemblyLoadContext.GetLoadedAssemblies().
+        }
 
         public static void RegisterOperationActionInternal(this AnalysisContext context, Action<OperationAnalysisContext> analyzerOperationCallback, params OperationKind[] operationKinds)
         {

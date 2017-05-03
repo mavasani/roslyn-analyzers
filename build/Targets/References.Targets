@@ -88,8 +88,10 @@
     <When Condition="'$(IncludeTestReferences)' == 'true'">
       <ItemGroup>
         <PackageReference Include="xunit" Version="$(XUnitVersion)" />
+        <PackageReference Include="xunit.assert" Version="$(XUnitVersion)" />
+        <PackageReference Include="xunit.core" Version="$(XUnitVersion)" />
         <PackageReference Include="xunit.runner.console" Version="$(XUnitVersion)" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0-beta5-build1225" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0-beta4-build1194" />
       </ItemGroup>
     </When>
   </Choose>

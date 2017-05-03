@@ -4,7 +4,7 @@
     <Import Project="..\..\..\build\Targets\Analyzers.Settings.targets" />
   </ImportGroup>
   <PropertyGroup>
-    <TargetFramework>net46</TargetFramework>
+    <TargetFramework>net462</TargetFramework>
     <SetupProject>true</SetupProject>
     <AssemblyName>Text.Analyzers.Setup</AssemblyName>
     <GeneratePkgDefFile>false</GeneratePkgDefFile>

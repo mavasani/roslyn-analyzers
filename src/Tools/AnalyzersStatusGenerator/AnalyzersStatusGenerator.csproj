@@ -3,7 +3,7 @@
     <Import Project="..\..\..\build\Targets\Analyzers.Settings.targets" />
   </ImportGroup>
   <PropertyGroup>
-    <TargetFramework>net46</TargetFramework>
+    <TargetFramework>net462</TargetFramework>
     <RootNamespace>AnalyzersStatusGenerator</RootNamespace>
     <AssemblyName>AnalyzersStatusGenerator</AssemblyName>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
