@@ -9,6 +9,13 @@
     <PackageId>*$(MSBuildProjectFullPath)*</PackageId>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="FlowAnalysis\Analysis\PointsToAnalysis\PointsToAnalysis.IndexerAbstractValueDomain.cs" />
+    <Compile Remove="FlowAnalysis\Analysis\PointsToAnalysis\PointsToAnalysis.PointsToAnalysisDomain.cs" />
+    <Compile Remove="FlowAnalysis\Analysis\PointsToAnalysis\PointsToAnalysisData.cs" />
+    <Compile Remove="FlowAnalysis\Framework\DataFlow\SymbolWithLocationInfo.InstanceMemberSymbol.cs" />
+    <Compile Remove="FlowAnalysis\Framework\DataFlow\SymbolWithLocationInfo.NonMemberOrStaticSymbol.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="Microsoft.CodeQuality.CSharp.Analyzers.Exp" />
     <InternalsVisibleTo Include="Microsoft.CodeQuality.VisualBasic.Analyzers.Exp" />
     <InternalsVisibleTo Include="Microsoft.CodeQuality.Analyzers.Exp.UnitTests" />
