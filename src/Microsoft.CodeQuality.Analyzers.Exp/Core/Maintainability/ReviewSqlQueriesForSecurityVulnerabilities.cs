@@ -8,7 +8,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
 using Microsoft.CodeAnalysis.Operations.ControlFlow;
-using Microsoft.CodeAnalysis.Operations.DataFlow;
 using Microsoft.CodeAnalysis.Operations.DataFlow.NullAnalysis;
 using Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis;
 using Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis;

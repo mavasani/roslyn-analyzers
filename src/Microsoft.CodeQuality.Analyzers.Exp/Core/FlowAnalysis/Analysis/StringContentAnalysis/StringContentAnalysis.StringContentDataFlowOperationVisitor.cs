@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
 {
@@ -142,7 +143,61 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
             {
                 // TODO: Handle invocations of string methods (Format, SubString, Replace, Concat, etc.)
                 // https://github.com/dotnet/roslyn-analyzers/issues/1547
-                return base.VisitInvocation_NonLambdaOrDelegateOrLocalFunction(operation, argument);
+                var value = base.VisitInvocation_NonLambdaOrDelegateOrLocalFunction(operation, argument);
+                if (operation.TargetMethod.ContainingType.SpecialType == SpecialType.System_String)
+                {
+                    if (operation.Instance != null)
+                    {
+                        // Instance methods on string type.
+
+                        // 1. "string.Clone": Returns a reference to this instance of String.
+                        // See https://docs.microsoft.com/en-us/dotnet/api/system.string.clone
+                        if (operation.TargetMethod.Name.Equals("Clone", StringComparison.Ordinal) &&
+                            operation.TargetMethod.MethodKind == MethodKind.Ordinary &&
+                            operation.TargetMethod.Parameters.IsEmpty &&
+                            operation.TargetMethod.ReturnType.SpecialType == SpecialType.System_Object)
+                        {
+                            return GetCachedAbstractValue(operation.Instance);
+                        }
+
+
+                    }
+                    else if (operation.TargetMethod.IsStatic)
+                    {
+                        // Static method methods on string type
+
+                        // 1. "string.Concat(values)": Concatenates the members of a constructed IEnumerable<T> collection of type String.
+                        // See https://docs.microsoft.com/en-us/dotnet/api/system.string.concat
+                        if (operation.TargetMethod.Name.Equals("Concat", StringComparison.Ordinal) &&
+                            operation.TargetMethod.MethodKind == MethodKind.Ordinary &&
+                            operation.TargetMethod.Parameters.Length > 0 &&
+                            operation.TargetMethod.ReturnType.SpecialType == SpecialType.System_String)
+                        {
+                            if (operation.TargetMethod.Parameters.Length > 1)
+                            {
+                                Debug.Assert(!operation.Arguments.IsEmpty);
+
+                                StringContentAbstractValue mergedValue = GetCachedAbstractValue(operation.Arguments[0]);
+                                for (int i = 1; i < operation.Arguments.Length; i++)
+                                {
+                                    var newValue = GetCachedAbstractValue(operation.Arguments[i]);
+                                    mergedValue = mergedValue.MergeBinaryAdd(newValue);
+                                }
+                            }
+                            else
+                            {
+                                var singleParameter = operation.TargetMethod.Parameters[0];
+                                if (singleParameter.Type.TypeKind == TypeKind.Array)
+                                {
+                                }
+                            }
+
+                            return mergedValue;
+                        }
+                    }
+                }
+
+                return ;
             }
 
             public override StringContentAbstractValue VisitInterpolatedString(IInterpolatedStringOperation operation, object argument)
