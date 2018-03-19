@@ -18,7 +18,7 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.UnitTests.Security
         protected new DiagnosticResult GetBasicResultAt(int line, int column, string invokedSymbol, string containingMethod) =>
             GetBasicResultAt(line, column, ReviewSqlQueriesForSecurityVulnerabilities.Rule, invokedSymbol, containingMethod);
 
-        protected const string SetupCodeCSharp = @"
+        internal const string SetupCodeCSharp = @"
 using System.Data;
 
 class Command : IDbCommand
@@ -102,7 +102,7 @@ class Adapter : IDataAdapter
     }
 }";
 
-        protected const string SetupCodeBasic = @"
+        internal const string SetupCodeBasic = @"
 Imports System
 Imports System.Data
 
