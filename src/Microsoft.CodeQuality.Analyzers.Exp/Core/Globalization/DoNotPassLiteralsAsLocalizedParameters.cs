@@ -1,9 +1,11 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using Analyzer.Utilities;
 using Analyzer.Utilities.Extensions;
 using Microsoft.CodeAnalysis;
@@ -65,102 +67,93 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
                         return;
                     }
 
+                    var lazyStringContentResult = new Lazy<DataFlowAnalysisResult<StringContentBlockAnalysisResult, StringContentAbstractValue>>(
+                        valueFactory: ComputeStringAnalysisResult, isThreadSafe: false);
+
                     operationBlockStartContext.RegisterOperationAction(operationContext =>
                     {
-                        var argumentOperation = (IArgumentOperation)operationContext.Operation;
-                        if (ShouldBeLocalized(argumentOperation.Parameter, localizableStateAttributeSymbol,
-                            conditionalAttributeSymbol, systemConsoleSymbol, typesToIgnore))
+                        var argument = (IArgumentOperation)operationContext.Operation;
+                        switch (argument.Parent?.Kind)
                         {
-
+                            case OperationKind.Invocation:
+                            case OperationKind.ObjectCreation:
+                                AnalyzeArgument(argument.Parameter, containingPropertySymbolOpt: null, operation: argument, reportDiagnostic: operationContext.ReportDiagnostic);
+                                return;
                         }
                     }, OperationKind.Argument);
 
-                    foreach (var operationRoot in operationBlockStartContext.OperationBlocks)
+                    operationBlockStartContext.RegisterOperationAction(operationContext =>
                     {
-                        IBlockOperation topmostBlock = operationRoot.GetTopmostParentBlock();
-                        if (topmostBlock != null && topmostBlock.HasAnyOperationDescendant(op => (op as IBinaryOperation)?.IsComparisonOperator() == true || op.Kind == OperationKind.Coalesce || op.Kind == OperationKind.ConditionalAccess))
+                        var propertyReference = (IPropertyReferenceOperation)operationContext.Operation;
+                        if (propertyReference.Parent is IAssignmentOperation assignment &&
+                            assignment.Target == propertyReference &&
+                            !propertyReference.Property.IsIndexer &&
+                            propertyReference.Property.SetMethod?.Parameters.Length == 1)
                         {
-                            var cfg = ControlFlowGraph.Create(topmostBlock);
-                            var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(operationBlockStartContext.Compilation);
-                            var nullAnalysisResult = NullAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider);
-                            var pointsToAnalysisResult = PointsToAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, nullAnalysisResult);
-                            var copyAnalysisResult = CopyAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, nullAnalysisResultOpt: nullAnalysisResult, pointsToAnalysisResultOpt: pointsToAnalysisResult);
-                            // Do another null analysis pass to improve the results from PointsTo and Copy analysis.
-                            nullAnalysisResult = NullAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult, pointsToAnalysisResultOpt: pointsToAnalysisResult);
-                            var stringContentAnalysisResult = StringContentAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult, nullAnalysisResult, pointsToAnalysisResult);
-
-                            operationBlockStartContext.RegisterOperationAction(operationContext =>
-                            {
-                                PredicateValueKind GetPredicateKind(IBinaryOperation operation)
-                                {
-                                    if (operation.IsComparisonOperator())
-                                    {
-                                        PredicateValueKind binaryPredicateKind = nullAnalysisResult.GetPredicateKind(operation);
-                                        if (binaryPredicateKind != PredicateValueKind.Unknown)
-                                        {
-                                            return binaryPredicateKind;
-                                        }
-
-                                        binaryPredicateKind = copyAnalysisResult.GetPredicateKind(operation);
-                                        if (binaryPredicateKind != PredicateValueKind.Unknown)
-                                        {
-                                            return binaryPredicateKind;
-                                        }
-
-                                        binaryPredicateKind = stringContentAnalysisResult.GetPredicateKind(operation);
-                                        if (binaryPredicateKind != PredicateValueKind.Unknown)
-                                        {
-                                            return binaryPredicateKind;
-                                        };
-                                    }
-
-                                    return PredicateValueKind.Unknown;
-                                }
-
-                                var binaryOperation = (IBinaryOperation)operationContext.Operation;
-                                PredicateValueKind predicateKind = GetPredicateKind(binaryOperation);
-                                if (predicateKind != PredicateValueKind.Unknown &&
-                                    (!(binaryOperation.LeftOperand is IBinaryOperation leftBinary) || GetPredicateKind(leftBinary) == PredicateValueKind.Unknown) &&
-                                    (!(binaryOperation.RightOperand is IBinaryOperation rightBinary) || GetPredicateKind(rightBinary) == PredicateValueKind.Unknown))
-                                {
-                                    // '{0}' is always '{1}'. Remove or refactor the condition(s) to avoid dead code.
-                                    var arg1 = binaryOperation.Syntax.ToString();
-                                    var arg2 = predicateKind == PredicateValueKind.AlwaysTrue ? 
-                                        (binaryOperation.Language == LanguageNames.VisualBasic ? "True" : "true") :
-                                        (binaryOperation.Language == LanguageNames.VisualBasic ? "False" : "false");
-                                    var diagnostic = binaryOperation.CreateDiagnostic(Rule, arg1, arg2);
-                                    operationContext.ReportDiagnostic(diagnostic);
-                                }
-                            }, OperationKind.BinaryOperator);
-
-                            operationBlockStartContext.RegisterOperationAction(operationContext =>
-                            {
-                                IOperation nullCheckedOperation = operationContext.Operation.Kind == OperationKind.Coalesce ?
-                                    ((ICoalesceOperation)operationContext.Operation).Value :
-                                    ((IConditionalAccessOperation)operationContext.Operation).Operation;
-
-                                // '{0}' is always/never '{1}'. Remove or refactor the condition(s) to avoid dead code.
-                                DiagnosticDescriptor rule;
-                                switch (nullAnalysisResult[nullCheckedOperation])
-                                {
-                                    case NullAbstractValue.Null:
-                                        rule = Rule;
-                                        break;
-
-                                    case NullAbstractValue.NotNull:
-                                        rule = NeverNullRule;
-                                        break;
-
-                                    default:
-                                        return;
-                                }
-
-                                var arg1 = nullCheckedOperation.Syntax.ToString();
-                                var arg2 = nullCheckedOperation.Language == LanguageNames.VisualBasic ? "Nothing" : "null";
-                                var diagnostic = nullCheckedOperation.CreateDiagnostic(rule, arg1, arg2);
-                                operationContext.ReportDiagnostic(diagnostic);
-                            }, OperationKind.Coalesce, OperationKind.ConditionalAccess);
+                            IParameterSymbol valueSetterParam = propertyReference.Property.SetMethod.Parameters[0];
+                            AnalyzeArgument(valueSetterParam, propertyReference.Property, assignment, operationContext.ReportDiagnostic);
                         }
+                    }, OperationKind.PropertyReference);
+
+                    void AnalyzeArgument(IParameterSymbol parameter, IPropertySymbol containingPropertySymbolOpt, IOperation operation, Action<Diagnostic> reportDiagnostic)
+                    {
+                        if (ShouldBeLocalized(parameter, containingPropertySymbolOpt, localizableStateAttributeSymbol, conditionalAttributeSymbol, systemConsoleSymbol, typesToIgnore))
+                        {
+                            StringContentAbstractValue stringContentValue = lazyStringContentResult.Value[operation];
+                            if (stringContentValue.IsLiteralState)
+                            {
+                                Debug.Assert(stringContentValue.LiteralValues.Count > 0);
+
+                                // FxCop compat: Do not fire if the literal value came from a default parameter value
+                                if (stringContentValue.LiteralValues.Count == 1 &&
+                                    parameter.IsOptional &&
+                                    parameter.ExplicitDefaultValue is string defaultValue &&
+                                    defaultValue == stringContentValue.LiteralValues.Single())
+                                {
+                                    return;
+                                }
+
+                                // FxCop compat: Do not fire if none of the string literals have any non-control character.
+                                if (!LiteralValuesHaveNonControlCharacters(stringContentValue.LiteralValues))
+                                {
+                                    return;
+                                }
+
+                                // FxCop compat: Filter out xml string literals.
+                                var filteredStrings = stringContentValue.LiteralValues.Where(literal => !LooksLikeXmlTag(literal));
+                                if (filteredStrings.Any())
+                                {
+                                    // Method '{0}' passes a literal string as parameter '{1}' of a call to '{2}'. Retrieve the following string(s) from a resource table instead: "{3}".
+                                    var arg1 = containingMethod.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+                                    var arg2 = parameter.Name;
+                                    var arg3 = parameter.ContainingSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+                                    var arg4 = FormatLiteralValues(filteredStrings);
+                                    var diagnostic = operation.CreateDiagnostic(Rule, arg1, arg2, arg3, arg4);
+                                    reportDiagnostic(diagnostic);
+                                }
+                            }
+                        }
+                    }
+
+                    DataFlowAnalysisResult<StringContentBlockAnalysisResult, StringContentAbstractValue> ComputeStringAnalysisResult()
+                    {
+                        foreach (var operationRoot in operationBlockStartContext.OperationBlocks)
+                        {
+                            IBlockOperation topmostBlock = operationRoot.GetTopmostParentBlock();
+                            if (topmostBlock != null)
+                            {
+                                var cfg = ControlFlowGraph.Create(topmostBlock);
+                                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(operationBlockStartContext.Compilation);
+                                var nullAnalysisResult = NullAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider);
+                                var pointsToAnalysisResult = PointsToAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, nullAnalysisResult);
+                                var copyAnalysisResult = CopyAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, nullAnalysisResultOpt: nullAnalysisResult, pointsToAnalysisResultOpt: pointsToAnalysisResult);
+                                // Do another null analysis pass to improve the results from PointsTo and Copy analysis.
+                                nullAnalysisResult = NullAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult, pointsToAnalysisResultOpt: pointsToAnalysisResult);
+                                return StringContentAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult, nullAnalysisResult, pointsToAnalysisResult);
+                            }
+                        }
+
+                        return null;
                     }
                 });
             });
@@ -180,18 +173,6 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
             if (webUILiteralControl != null)
             {
                 builder.Add(webUILiteralControl);
-            }
-
-            var xunitAssert = WellKnownTypes.XunitAssert(compilation);
-            if (xunitAssert != null)
-            {
-                builder.Add(xunitAssert);
-            }
-
-            var nunitAssert = WellKnownTypes.NunitAssert(compilation);
-            if (nunitAssert != null)
-            {
-                builder.Add(nunitAssert);
             }
 
             var unitTestingAssert = WellKnownTypes.UnitTestingAssert(compilation);
@@ -217,6 +198,7 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
 
         private static bool ShouldBeLocalized(
             IParameterSymbol parameterSymbol,
+            IPropertySymbol containingPropertySymbolOpt,
             INamedTypeSymbol localizableStateAttributeSymbol,
             INamedTypeSymbol conditionalAttributeSymbol,
             INamedTypeSymbol systemConsoleSymbol,
@@ -230,17 +212,20 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
             }
 
             // Verify LocalizableAttributeState
-            LocalizableAttributeState localizableAttributeState = GetLocalizableAttributeState(parameterSymbol, localizableStateAttributeSymbol);
-            switch (localizableAttributeState)
+            if (localizableStateAttributeSymbol != null)
             {
-                case LocalizableAttributeState.False:
-                    return false;
+                LocalizableAttributeState localizableAttributeState = GetLocalizableAttributeState(parameterSymbol, localizableStateAttributeSymbol);
+                switch (localizableAttributeState)
+                {
+                    case LocalizableAttributeState.False:
+                        return false;
 
-                case LocalizableAttributeState.True:
-                    return true;
+                    case LocalizableAttributeState.True:
+                        return true;
 
-                default:
-                    break;
+                    default:
+                        break;
+                }
             }
 
             // FxCop compat checks.
@@ -250,34 +235,27 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
                 return false;
             }
 
-            // FxCop compat: If corresponding parameter in any of the overridden methods is not-localizable, then return false.
+            // FxCop compat: For overrides, check for localizability of the corresponding parameter in the overridden method.
             var method = (IMethodSymbol)parameterSymbol.ContainingSymbol;
             if (method.IsOverride &&
                 method.OverriddenMethod.Parameters.Length == method.Parameters.Length)
             {
                 int parameterIndex = method.GetParameterIndex(parameterSymbol);
                 IParameterSymbol overridenParameter = method.OverriddenMethod.Parameters[parameterIndex];
-                if (overridenParameter.Type == parameterSymbol.Type &&
-                    !ShouldBeLocalized(overridenParameter, localizableStateAttributeSymbol, conditionalAttributeSymbol, systemConsoleSymbol, typesToIgnore))
+                if (overridenParameter.Type == parameterSymbol.Type)
                 {
-                    return false;
+                    return ShouldBeLocalized(overridenParameter, containingPropertySymbolOpt, localizableStateAttributeSymbol, conditionalAttributeSymbol, systemConsoleSymbol, typesToIgnore);
                 }
             }
 
             // FxCop compat: If a localizable attribute isn't defined then fall back to name heuristics.
-            bool IsLocalizableSymbolName(ISymbol symbol) =>
+            bool IsLocalizableByNameHeuristic(ISymbol symbol) =>
                 symbol.Name.Equals("message", StringComparison.OrdinalIgnoreCase) ||
                 symbol.Name.Equals("text", StringComparison.OrdinalIgnoreCase) ||
                 symbol.Name.Equals("caption", StringComparison.OrdinalIgnoreCase);
 
-            if (IsLocalizableSymbolName(parameterSymbol))
-            {
-                return true;
-            }
-
-            if (parameterSymbol.Name.Equals("value", StringComparison.OrdinalIgnoreCase) &&
-                method.AssociatedSymbol?.Kind == SymbolKind.Property &&
-                IsLocalizableSymbolName(method.AssociatedSymbol))
+            if (IsLocalizableByNameHeuristic(parameterSymbol) ||
+                containingPropertySymbolOpt != null && IsLocalizableByNameHeuristic(containingPropertySymbolOpt))
             {
                 return true;
             }
@@ -308,7 +286,8 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
                 return localizedState;
             }
 
-            return GetLocalizableAttributeState(symbol.ContainingSymbol, localizableAttributeTypeSymbol);
+            ISymbol containingSymbol = (symbol as IMethodSymbol)?.AssociatedSymbol is IPropertySymbol propertySymbol ? propertySymbol : symbol.ContainingSymbol;
+            return GetLocalizableAttributeState(containingSymbol, localizableAttributeTypeSymbol);
         }
 
         private static LocalizableAttributeState GetLocalizableAttributeStateCore(ImmutableArray<AttributeData> attributeList, INamedTypeSymbol localizableAttributeTypeSymbol)
@@ -327,6 +306,52 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
             }
 
             return LocalizableAttributeState.Undefined;
+        }
+
+        private static string FormatLiteralValues(IEnumerable<string> literalValues)
+        {
+            var literals = new StringBuilder();
+            foreach (string literal in literalValues.Order())
+            {
+                if (literals.Length > 0)
+                {
+                    literals.Append(", ");
+                }
+
+                literals.Append(literal);
+        }
+
+            return literals.ToString();
+        }
+
+        /// <summary>
+        /// Returns true if the given string looks like an XML/HTML tag
+        /// </summary>
+        private static bool LooksLikeXmlTag(string literal)
+        {
+            // Call the trim function to remove any spaces around the beginning and end of the string so we can more accurately detect
+            // XML strings
+            string trimmedLiteral = literal.Trim();
+            return trimmedLiteral.Length > 2 && trimmedLiteral[0] == '<' && trimmedLiteral[trimmedLiteral.Length - 1] == '>';
+        }
+
+        /// <summary>
+        /// Returns true if any character in literalValues is not a control character
+        /// </summary>
+        private static bool LiteralValuesHaveNonControlCharacters(IEnumerable<string> literalValues)
+        {
+            foreach (string literal in literalValues)
+            {
+                foreach (char ch in literal)
+                {
+                    if (!char.IsControl(ch))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }
