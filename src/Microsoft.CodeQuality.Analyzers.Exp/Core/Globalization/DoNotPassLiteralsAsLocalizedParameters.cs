@@ -65,6 +65,16 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
                         return;
                     }
 
+                    operationBlockStartContext.RegisterOperationAction(operationContext =>
+                    {
+                        var argumentOperation = (IArgumentOperation)operationContext.Operation;
+                        if (ShouldBeLocalized(argumentOperation.Parameter, localizableStateAttributeSymbol,
+                            conditionalAttributeSymbol, systemConsoleSymbol, typesToIgnore))
+                        {
+
+                        }
+                    }, OperationKind.Argument);
+
                     foreach (var operationRoot in operationBlockStartContext.OperationBlocks)
                     {
                         IBlockOperation topmostBlock = operationRoot.GetTopmostParentBlock();
@@ -153,7 +163,6 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
                         }
                     }
                 });
-
             });
         }
 
@@ -220,6 +229,7 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
                 return false;
             }
 
+            // Verify LocalizableAttributeState
             LocalizableAttributeState localizableAttributeState = GetLocalizableAttributeState(parameterSymbol, localizableStateAttributeSymbol);
             switch (localizableAttributeState)
             {
@@ -233,11 +243,14 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
                     break;
             }
 
-            if (IsNameHeuristicException(parameterSymbol, typesToIgnore, conditionalAttributeSymbol))
+            // FxCop compat checks.
+            if (typesToIgnore.Contains(parameterSymbol.ContainingType) ||
+                parameterSymbol.ContainingSymbol.HasAttribute(conditionalAttributeSymbol))
             {
                 return false;
             }
 
+            // FxCop compat: If corresponding parameter in any of the overridden methods is not-localizable, then return false.
             var method = (IMethodSymbol)parameterSymbol.ContainingSymbol;
             if (method.IsOverride &&
                 method.OverriddenMethod.Parameters.Length == method.Parameters.Length)
@@ -245,43 +258,37 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
                 int parameterIndex = method.GetParameterIndex(parameterSymbol);
                 IParameterSymbol overridenParameter = method.OverriddenMethod.Parameters[parameterIndex];
                 if (overridenParameter.Type == parameterSymbol.Type &&
-                    !ShouldBeLocalized(overridenParameter, localizableStateAttributeSymbol, conditionalAttributeSymbol, typesToIgnore))
+                    !ShouldBeLocalized(overridenParameter, localizableStateAttributeSymbol, conditionalAttributeSymbol, systemConsoleSymbol, typesToIgnore))
                 {
                     return false;
                 }
             }
 
+            // FxCop compat: If a localizable attribute isn't defined then fall back to name heuristics.
             bool IsLocalizableSymbolName(ISymbol symbol) =>
                 symbol.Name.Equals("message", StringComparison.OrdinalIgnoreCase) ||
                 symbol.Name.Equals("text", StringComparison.OrdinalIgnoreCase) ||
                 symbol.Name.Equals("caption", StringComparison.OrdinalIgnoreCase);
 
-            // If a localizable attribute isn't defined then fall back to name heuristics
             if (IsLocalizableSymbolName(parameterSymbol))
             {
                 return true;
             }
-            else if (parameterSymbol.Name.Equals("value", StringComparison.OrdinalIgnoreCase) &&
-                method.AssociatedSymbol?.Kind == SymbolKind.Property)
+
+            if (parameterSymbol.Name.Equals("value", StringComparison.OrdinalIgnoreCase) &&
+                method.AssociatedSymbol?.Kind == SymbolKind.Property &&
+                IsLocalizableSymbolName(method.AssociatedSymbol))
             {
-                if (IsLocalizableSymbolName(method.AssociatedSymbol))
-                {
-                    return true;
-                }
+                return true;
             }
 
-            if (s_consoleWrite.MatchesFunctionSymbol(functionSymbol) ||
-                s_consoleWriteLine.MatchesFunctionSymbol(functionSymbol))
+            if (method.ContainingType.Equals(systemConsoleSymbol) &&
+                (method.Name.Equals("Write", StringComparison.Ordinal) ||
+                 method.Name.Equals("WriteLine", StringComparison.Ordinal)) &&
+                (parameterSymbol.Name.Equals("format", StringComparison.OrdinalIgnoreCase) ||
+                 parameterSymbol.Name.Equals("value", StringComparison.OrdinalIgnoreCase)))
             {
-                if (nameString.Equals("format", StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-
-                if (nameString.Equals("value", StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
+                return true;
             }
 
             return false;
@@ -320,32 +327,6 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Globalization
             }
 
             return LocalizableAttributeState.Undefined;
-        }
-
-        private static bool IsNameHeuristicException(IParameterSymbol parameterSymbol, ImmutableHashSet<INamedTypeSymbol> typesToIgnore, INamedTypeSymbol conditionalAttributeSymbol)
-        {
-            if (typesToIgnore.Contains(parameterSymbol.ContainingType) ||
-                parameterSymbol.ContainingSymbol.GetAttributes().Any(n => n.AttributeClass.Equals(conditionalAttributeSymbol)))
-            {
-                return true;
-            }
-
-            if (
-
-            AggregateType enclosingType = functionSymbol.EnclosingAggregateType;
-            if (enclosingType != null && s_typeHeuristicExceptions[enclosingType])
-            {
-                return true;
-            }
-
-            // if we have a conditional attribute applied the method
-            // it is not likely to be a candidate for localization
-            if (SymbolExtensions.HasAttribute(functionSymbol, s_conditionalAttribute))
-            {
-                return true;
-            }
-
-            return false;
         }
     }
 }
