@@ -25,7 +25,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.NullAnalysis
                 bool pessimisticAnalysis,
                 DataFlowAnalysisResult<CopyBlockAnalysisResult, CopyAbstractValue> copyAnalysisResultOpt,
                 DataFlowAnalysisResult<PointsToAnalysis.PointsToBlockAnalysisResult, PointsToAnalysis.PointsToAbstractValue> pointsToAnalysisResultOpt)
-                : base(valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis: true, nullAnalysisResultOpt: null, copyAnalysisResultOpt: copyAnalysisResultOpt, pointsToAnalysisResultOpt: pointsToAnalysisResultOpt)
+                : base(valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis: true, copyAnalysisResultOpt: copyAnalysisResultOpt, pointsToAnalysisResultOpt: pointsToAnalysisResultOpt)
             {
             }
 
@@ -62,8 +62,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.NullAnalysis
 
                 return NullAbstractValue.Null;
             }
-
-            protected override NullAbstractValue GetNullAbstractValue(IOperation operation) => GetCachedAbstractValue(operation);
 
             protected override void ResetCurrentAnalysisData(NullAnalysisData newAnalysisDataOpt = null) => ResetAnalysisData(CurrentAnalysisData, newAnalysisDataOpt);
 

@@ -65,26 +65,30 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 {
                     return value1;
                 }
-                else if(value1.Kind == PointsToAbstractValueKind.Undefined || value1.Kind == PointsToAbstractValueKind.NoLocation)
-                {
-                    return value2;
-                }
-                else if (value2.Kind == PointsToAbstractValueKind.Undefined || value2.Kind == PointsToAbstractValueKind.NoLocation)
+                else if (value1 == value2)
                 {
                     return value1;
                 }
-                else if (value1.Kind == PointsToAbstractValueKind.Unknown || value2.Kind == PointsToAbstractValueKind.Unknown)
+                else if (value1.Kind == PointsToAbstractValueKind.Undefined ||
+                    value1.Kind == PointsToAbstractValueKind.Invalid)
+                {
+                    return value2;
+                }
+                else if (value2.Kind == PointsToAbstractValueKind.Undefined ||
+                    value2.Kind == PointsToAbstractValueKind.Invalid)
+                {
+                    return value1;
+                }
+                else if (value1.Kind == PointsToAbstractValueKind.NoLocation ||
+                    value2.Kind == PointsToAbstractValueKind.NoLocation ||
+                    value1.Kind == PointsToAbstractValueKind.Unknown ||
+                    value2.Kind == PointsToAbstractValueKind.Unknown)
                 {
                     return PointsToAbstractValue.Unknown;
                 }
 
                 var mergedLocations = _locationsDomain.Merge(value1.Locations, value2.Locations);
-                if (mergedLocations.Count == 1 && mergedLocations.Single().IsNull)
-                {
-                    return PointsToAbstractValue.NullLocation;
-                }
-
-                return new PointsToAbstractValue(mergedLocations);
+                return PointsToAbstractValue.Create(mergedLocations);
             }
         }
     }

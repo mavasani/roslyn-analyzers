@@ -217,9 +217,8 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Security
                     var cfg = ControlFlowGraph.Create(topmostBlock);
                     var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(operationContext.Compilation);
                     var copyAnalysisResult = CopyAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider);
-                    var nullAnalysisResult = NullAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider);
-                    var pointsToAnalysisResult = PointsToAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, nullAnalysisResult);
-                    var stringContentResult = StringContentAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult, nullAnalysisResult, pointsToAnalysisResult);
+                    var pointsToAnalysisResult = PointsToAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider);
+                    var stringContentResult = StringContentAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult, pointsToAnalysisResult);
                     StringContentAbstractValue value = stringContentResult[argumentValue];
                     if (value.NonLiteralState == StringContainsNonLiteralState.No)
                     {

@@ -23,10 +23,9 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
                 WellKnownTypeProvider wellKnownTypeProvider,
                 bool pessimisticAnalysis,
                 DataFlowAnalysisResult<CopyBlockAnalysisResult, CopyAbstractValue> copyAnalysisResultOpt,
-                DataFlowAnalysisResult<NullAnalysis.NullBlockAnalysisResult, NullAnalysis.NullAbstractValue> nullAnalysisResultOpt,
                 DataFlowAnalysisResult<PointsToAnalysis.PointsToBlockAnalysisResult, PointsToAnalysis.PointsToAbstractValue> pointsToAnalysisResultOpt)
                 : base(valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis: true,
-                      nullAnalysisResultOpt: nullAnalysisResultOpt, copyAnalysisResultOpt: copyAnalysisResultOpt, pointsToAnalysisResultOpt: pointsToAnalysisResultOpt)
+                      copyAnalysisResultOpt: copyAnalysisResultOpt, pointsToAnalysisResultOpt: pointsToAnalysisResultOpt)
             {
             }
 

@@ -28,11 +28,10 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             WellKnownTypeProvider wellKnownTypeProvider,
             bool pessimisticAnalysis,
             bool predicateAnalysis,
-            DataFlowAnalysisResult<NullBlockAnalysisResult, NullAbstractValue> nullAnalysisResultOpt,
             DataFlowAnalysisResult<CopyBlockAnalysisResult, CopyAbstractValue> copyAnalysisResultOpt,
             DataFlowAnalysisResult<PointsToBlockAnalysisResult, PointsToAbstractValue> pointsToAnalysisResultOpt)
             : base (valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis,
-                  nullAnalysisResultOpt, copyAnalysisResultOpt, pointsToAnalysisResultOpt)
+                  copyAnalysisResultOpt, pointsToAnalysisResultOpt)
         {
         }
 
@@ -259,7 +258,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             }
         }
 
-        private IEnumerable<AnalysisEntity> GetChildAnalysisEntities(PointsToAbstractValue instanceLocationOpt)
+        protected IEnumerable<AnalysisEntity> GetChildAnalysisEntities(PointsToAbstractValue instanceLocationOpt)
         {
             // We are interested only in dependent child/member infos, not the root info.
             if (instanceLocationOpt != null)

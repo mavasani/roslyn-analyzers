@@ -19,7 +19,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
     /// </summary>
     internal abstract class DataFlowOperationVisitor<TAnalysisData, TAbstractAnalysisValue> : OperationVisitor<object, TAbstractAnalysisValue>
     {
-        private readonly DataFlowAnalysisResult<NullBlockAnalysisResult, NullAbstractValue> _nullAnalysisResultOpt;
         private readonly DataFlowAnalysisResult<CopyBlockAnalysisResult, CopyAbstractValue> _copyAnalysisResultOpt;
         private readonly DataFlowAnalysisResult<PointsToBlockAnalysisResult, PointsToAbstractValue> _pointsToAnalysisResultOpt;
         private readonly ImmutableDictionary<IOperation, TAbstractAnalysisValue>.Builder _valueCacheBuilder;
@@ -89,7 +88,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             WellKnownTypeProvider wellKnownTypeProvider,
             bool pessimisticAnalysis,
             bool predicateAnalysis,
-            DataFlowAnalysisResult<NullBlockAnalysisResult, NullAbstractValue> nullAnalysisResultOpt,
             DataFlowAnalysisResult<CopyBlockAnalysisResult, CopyAbstractValue> copyAnalysisResultOpt,
             DataFlowAnalysisResult<PointsToBlockAnalysisResult, PointsToAbstractValue> pointsToAnalysisResultOpt)
         {
@@ -105,7 +103,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             WellKnownTypeProvider = wellKnownTypeProvider;
             PessimisticAnalysis = pessimisticAnalysis;
             PredicateAnalysis = predicateAnalysis;
-            _nullAnalysisResultOpt = nullAnalysisResultOpt;
             _copyAnalysisResultOpt = copyAnalysisResultOpt;
             _pointsToAnalysisResultOpt = pointsToAnalysisResultOpt;
             _valueCacheBuilder = ImmutableDictionary.CreateBuilder<IOperation, TAbstractAnalysisValue>();
@@ -132,9 +129,8 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 HashUtilities.Combine(WellKnownTypeProvider.Compilation.GetHashCode(),
                 HashUtilities.Combine(PessimisticAnalysis.GetHashCode(),
                 HashUtilities.Combine(PredicateAnalysis.GetHashCode(),
-                HashUtilities.Combine(_nullAnalysisResultOpt?.GetHashCode() ?? 0,
                 HashUtilities.Combine(_copyAnalysisResultOpt?.GetHashCode() ?? 0,
-                    _pointsToAnalysisResultOpt?.GetHashCode() ?? 0))))))));
+                    _pointsToAnalysisResultOpt?.GetHashCode() ?? 0)))))));
         }
 
         private static PointsToAbstractValue GetThisOrMeInstancePointsToValue(ISymbol owningSymbol)
@@ -143,7 +139,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 !owningSymbol.ContainingType.HasValueCopySemantics())
             {
                 var thisOrMeLocation = AbstractLocation.CreateThisOrMeLocation(owningSymbol.ContainingType);
-                return new PointsToAbstractValue(thisOrMeLocation);
+                return PointsToAbstractValue.Create(thisOrMeLocation, mayBeNull: false);
             }
             else
             {
@@ -284,17 +280,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             _valueCacheBuilder[operation] = value;
         }
 
-        protected virtual NullAbstractValue GetNullAbstractValue(IOperation operation)
-        {
-            if (_nullAnalysisResultOpt == null)
-            {
-                return NullAbstractValue.MaybeNull;
-            }
-            else
-            {
-                return _nullAnalysisResultOpt[operation];
-            }
-        }
+        protected NullAbstractValue GetNullAbstractValue(IOperation operation) => GetPointsToAbstractValue(operation).NullState;
 
         protected virtual CopyAbstractValue GetCopyAbstractValue(IOperation operation)
         {
@@ -336,22 +322,30 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
 
         protected bool TryGetNullAbstractValueAtCurrentBlockEntry(AnalysisEntity analysisEntity, out NullAbstractValue nullAbstractValue)
         {
-            Debug.Assert(_nullAnalysisResultOpt != null);
-            var inputData = _nullAnalysisResultOpt[CurrentBasicBlock].InputData;
-            return inputData.TryGetValue(analysisEntity, out nullAbstractValue);
+            Debug.Assert(_pointsToAnalysisResultOpt != null);
+            var inputData = _pointsToAnalysisResultOpt[CurrentBasicBlock].InputData;
+            if (inputData.TryGetValue(analysisEntity, out PointsToAbstractValue pointsToAbstractValue))
+            {
+                nullAbstractValue = pointsToAbstractValue.NullState;
+                return true;
+            }
+
+            nullAbstractValue = NullAbstractValue.MaybeNull;
+            return false;
         }
 
         protected bool TryGetMergedNullAbstractValueAtUnhandledThrowOperationsInGraph(AnalysisEntity analysisEntity, out NullAbstractValue nullAbstractValue)
         {
-            Debug.Assert(_nullAnalysisResultOpt != null);
-            var inputData = _nullAnalysisResultOpt.MergedStateForUnhandledThrowOperationsOpt?.InputData;
-            if (inputData == null)
+            Debug.Assert(_pointsToAnalysisResultOpt != null);
+            var inputData = _pointsToAnalysisResultOpt.MergedStateForUnhandledThrowOperationsOpt?.InputData;
+            if (inputData == null || !inputData.TryGetValue(analysisEntity, out PointsToAbstractValue pointsToAbstractValue))
             {
                 nullAbstractValue = NullAbstractValue.MaybeNull;
                 return false;
             }
 
-            return inputData.TryGetValue(analysisEntity, out nullAbstractValue);
+            nullAbstractValue = pointsToAbstractValue.NullState;
+            return true;
         }
 
         protected virtual TAbstractAnalysisValue ComputeAnalysisValueForReferenceOperation(IOperation operation, TAbstractAnalysisValue defaultValue)
@@ -607,8 +601,8 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
         protected Stack<TAnalysisData> NegatedCurrentAnalysisDataStack { get; }
 
         protected abstract TAnalysisData MergeAnalysisData(TAnalysisData value1, TAnalysisData value2);
-        protected virtual TAnalysisData MergeAnalysisDataForBackEdge(TAnalysisData value1, TAnalysisData value2)
-            => MergeAnalysisData(value1, value2);
+        protected virtual TAnalysisData MergeAnalysisDataForBackEdge(TAnalysisData forwardEdgeAnalysisData)
+            => MergeAnalysisData(forwardEdgeAnalysisData, CurrentAnalysisData);
         protected abstract TAnalysisData GetClonedAnalysisData(TAnalysisData analysisData);
         protected TAnalysisData GetClonedCurrentAnalysisData() => GetClonedAnalysisData(CurrentAnalysisData);
         protected abstract bool Equals(TAnalysisData value1, TAnalysisData value2);
@@ -653,7 +647,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                     return whenNullValue;
 
                 default:
-                    var value1 = GetAbstractDefaultValue(operation.WhenNotNull.Type);
+                    var value1 = GetAbstractDefaultValue(operation.Type);
                     return ValueDomain.Merge(value1, whenNullValue);
             }
         }
@@ -873,7 +867,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 else if (previousIterationAnalysisData != null)
                 {
                     // We are going to execute the non-first loop iteration of bottom loop.
-                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData, CurrentAnalysisData);
+                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData);
                 }
 
                 var unusedBodyValue = Visit(operation.Body, argument);
@@ -888,7 +882,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 else
                 {
                     // We are going to execute the non-first loop iteration of top loop.
-                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData, CurrentAnalysisData);
+                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData);
                 }
             }
 
@@ -915,7 +909,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 if (previousIterationAnalysisData != null)
                 {
                     // We are going to execute the non-first loop iteration.
-                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData, CurrentAnalysisData);
+                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData);
                 }
 
                 if (PredicateAnalysis)
@@ -966,7 +960,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 if (previousIterationAnalysisData != null)
                 {
                     // We are going to execute the non-first loop iteration.
-                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData, CurrentAnalysisData);
+                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData);
                 }
 
                 MergeAnalysisDataFromContinueStatements();
@@ -1001,7 +995,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 if (previousIterationAnalysisData != null)
                 {
                     // We are going to execute the non-first loop iteration.
-                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData, CurrentAnalysisData);
+                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData);
                 }
 
                 MergeAnalysisDataFromContinueStatements();

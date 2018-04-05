@@ -37,9 +37,8 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.DisposeAnalysis
                 WellKnownTypeProvider wellKnownTypeProvider,
                 ImmutableHashSet<INamedTypeSymbol> disposeOwnershipTransferLikelyTypes,
                 bool trackInstanceFields,
-                DataFlowAnalysisResult<PointsToBlockAnalysisResult, PointsToAbstractValue> pointsToAnalysisResult,
-                DataFlowAnalysisResult<NullBlockAnalysisResult, NullAbstractValue> nullAnalysisResultOpt)
-                : base(valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis: false, nullAnalysisResultOpt: nullAnalysisResultOpt, copyAnalysisResultOpt: null, pointsToAnalysisResultOpt: pointsToAnalysisResult)
+                DataFlowAnalysisResult<PointsToBlockAnalysisResult, PointsToAbstractValue> pointsToAnalysisResult)
+                : base(valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis: false, copyAnalysisResultOpt: null, pointsToAnalysisResultOpt: pointsToAnalysisResult)
             {
                 Debug.Assert(wellKnownTypeProvider.IDisposable != null);
                 Debug.Assert(wellKnownTypeProvider.CollectionTypes.All(ct => ct.TypeKind == TypeKind.Interface));

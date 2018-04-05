@@ -724,20 +724,24 @@ class Test
 
             VerifyBasic(@"
 Class C
-    Public ReadOnly Property ContainingC As C
 End Class
 
-Module Test
-    Private Sub M1(param As C)
-        If param Is Nothing OrElse param.ContainingC Is Nothing Then
-            Return
-        End If
+Class Test
+    Private Property [Next] As Test
+    Private Property CInstances As C()
 
-        While param IsNot Nothing
-            param = param.ContainingC
+    Private Sub M(ByVal flag As Boolean)
+        Dim current = Me
+        While current IsNot Nothing
+            For Each x In current.CInstances
+                If flag Then Return
+            Next
+
+            current = current.[Next]
         End While
     End Sub
-End Module");
+End Class
+");
         }
 
         [Trait(Traits.DataflowAnalysis, Traits.Dataflow.NullAnalysis)]

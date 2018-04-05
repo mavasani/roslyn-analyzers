@@ -29,7 +29,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             {
                 value = analysisEntity.SymbolOpt?.Kind == SymbolKind.Local ?
                     PointsToAbstractValue.Undefined :
-                    new PointsToAbstractValue(AbstractLocation.CreateAnalysisEntityDefaultLocation(analysisEntity));
+                    PointsToAbstractValue.Create(AbstractLocation.CreateAnalysisEntityDefaultLocation(analysisEntity), mayBeNull: true);
                 _defaultPointsToValueMapBuilder.Add(analysisEntity, value);
             }
 

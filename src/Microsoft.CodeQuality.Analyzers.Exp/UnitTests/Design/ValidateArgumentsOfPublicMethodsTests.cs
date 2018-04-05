@@ -703,12 +703,12 @@ public class Test
         if (flag)
         {
             x = ""newString"";
-            c = new C();
+            //c = new C();
         }
 
         // Below may or may not cause null refs
         var y = x.ToString();
-        var z = c.X;
+        //var z = c.X;
     }
 }
 ",

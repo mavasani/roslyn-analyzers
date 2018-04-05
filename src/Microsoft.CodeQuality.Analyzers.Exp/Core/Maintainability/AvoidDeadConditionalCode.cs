@@ -76,12 +76,11 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Maintainability
                         {
                             var cfg = ControlFlowGraph.Create(topmostBlock);
                             var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(operationBlockStartContext.Compilation);
-                            var nullAnalysisResult = NullAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider);
-                            var pointsToAnalysisResult = PointsToAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, nullAnalysisResult);
-                            var copyAnalysisResult = CopyAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, nullAnalysisResultOpt: nullAnalysisResult, pointsToAnalysisResultOpt: pointsToAnalysisResult);
-                            // Do another null analysis pass to improve the results from PointsTo and Copy analysis.
-                            nullAnalysisResult = NullAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult, pointsToAnalysisResultOpt: pointsToAnalysisResult);
-                            var stringContentAnalysisResult = StringContentAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult, nullAnalysisResult, pointsToAnalysisResult);
+                            var pointsToAnalysisResult = PointsToAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider);
+                            var copyAnalysisResult = CopyAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, pointsToAnalysisResultOpt: pointsToAnalysisResult);
+                            // Do another analysis pass to improve the results from PointsTo and Copy analysis.
+                            pointsToAnalysisResult = PointsToAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult);
+                            var stringContentAnalysisResult = StringContentAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult, pointsToAnalysisResult);
 
                             operationBlockStartContext.RegisterOperationAction(operationContext =>
                             {
@@ -112,7 +111,7 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Maintainability
 
                                 // '{0}' is always/never '{1}'. Remove or refactor the condition(s) to avoid dead code.
                                 DiagnosticDescriptor rule;
-                                switch (nullAnalysisResult[nullCheckedOperation])
+                                switch (pointsToAnalysisResult[nullCheckedOperation].NullState)
                                 {
                                     case NullAbstractValue.Null:
                                         rule = AlwaysTrueFalseOrNullRule;
@@ -141,7 +140,7 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Maintainability
                                     operation is IInvocationOperation invocationOperation &&
                                     invocationOperation.Type?.SpecialType == SpecialType.System_Boolean)
                                 {
-                                    PredicateValueKind predicateKind = nullAnalysisResult.GetPredicateKind(operation);
+                                    PredicateValueKind predicateKind = pointsToAnalysisResult.GetPredicateKind(operation);
                                     if (predicateKind != PredicateValueKind.Unknown)
                                     {
                                         return predicateKind;

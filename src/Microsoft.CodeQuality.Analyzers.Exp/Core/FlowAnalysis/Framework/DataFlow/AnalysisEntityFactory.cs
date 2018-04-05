@@ -33,7 +33,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             _instanceLocationsForSymbols = new Dictionary<ISymbol, PointsToAbstractValue>();
 
             var thisOrMeInstanceLocation = AbstractLocation.CreateThisOrMeLocation(containingTypeSymbol);
-            var instanceLocation = new PointsToAbstractValue(thisOrMeInstanceLocation);
+            var instanceLocation = PointsToAbstractValue.Create(thisOrMeInstanceLocation, mayBeNull: false);
             ThisOrMeInstance = AnalysisEntity.CreateThisOrMeInstance(containingTypeSymbol, instanceLocation);
         }
 
@@ -310,7 +310,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                     else
                     {
                         var location = AbstractLocation.CreateSymbolLocation(symbolOpt);
-                        instanceLocationOpt = new PointsToAbstractValue(location);
+                        instanceLocationOpt = PointsToAbstractValue.Create(location, mayBeNull: false);
                     }
 
                     _instanceLocationsForSymbols.Add(symbolOpt, instanceLocationOpt);

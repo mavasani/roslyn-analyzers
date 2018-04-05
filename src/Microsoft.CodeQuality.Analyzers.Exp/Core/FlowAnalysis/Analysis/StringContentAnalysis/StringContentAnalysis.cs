@@ -25,12 +25,11 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
             ISymbol owningSymbol,
             WellKnownTypeProvider wellKnownTypeProvider,
             DataFlowAnalysisResult<CopyAnalysis.CopyBlockAnalysisResult, CopyAnalysis.CopyAbstractValue> copyAnalysisResultOpt,
-            DataFlowAnalysisResult<NullAnalysis.NullBlockAnalysisResult, NullAnalysis.NullAbstractValue> nullAnalysisResultOpt = null,
             DataFlowAnalysisResult<PointsToAnalysis.PointsToBlockAnalysisResult, PointsToAnalysis.PointsToAbstractValue> pointsToAnalysisResultOpt = null,
             bool pessimisticAnalsysis = true)
         {
             var operationVisitor = new StringContentDataFlowOperationVisitor(StringContentAbstractValueDomain.Default, owningSymbol,
-                wellKnownTypeProvider, pessimisticAnalsysis, copyAnalysisResultOpt, nullAnalysisResultOpt, pointsToAnalysisResultOpt);
+                wellKnownTypeProvider, pessimisticAnalsysis, copyAnalysisResultOpt, pointsToAnalysisResultOpt);
             var nullAnalysis = new StringContentAnalysis(StringContentAnalysisDomainInstance, operationVisitor);
             return nullAnalysis.GetOrComputeResultCore(cfg, cacheResult: false);
         }

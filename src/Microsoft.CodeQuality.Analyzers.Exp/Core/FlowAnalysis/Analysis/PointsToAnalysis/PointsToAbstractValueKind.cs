@@ -23,6 +23,11 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
         NoLocation,
 
         /// <summary>
+        /// Invalid value from predicate analysis.
+        /// </summary>
+        Invalid,
+
+        /// <summary>
         /// Points to unknown set of locations.
         /// </summary>
         Unknown,

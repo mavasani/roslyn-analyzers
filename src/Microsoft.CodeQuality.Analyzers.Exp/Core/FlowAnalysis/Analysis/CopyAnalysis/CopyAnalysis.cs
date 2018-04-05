@@ -22,12 +22,11 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.CopyAnalysis
             ControlFlowGraph cfg,
             ISymbol owningSymbol,
             WellKnownTypeProvider wellKnownTypeProvider,
-            DataFlowAnalysisResult<NullAnalysis.NullBlockAnalysisResult, NullAnalysis.NullAbstractValue> nullAnalysisResultOpt = null,
             DataFlowAnalysisResult<PointsToAnalysis.PointsToBlockAnalysisResult, PointsToAnalysis.PointsToAbstractValue> pointsToAnalysisResultOpt = null,
             bool pessimisticAnalysis = true)
         {
             var operationVisitor = new CopyDataFlowOperationVisitor(CopyAbstractValueDomain.Default, owningSymbol, 
-                wellKnownTypeProvider, pessimisticAnalysis, nullAnalysisResultOpt, pointsToAnalysisResultOpt);
+                wellKnownTypeProvider, pessimisticAnalysis, pointsToAnalysisResultOpt);
             var copyAnalysis = new CopyAnalysis(CopyAnalysisDomain.Instance, operationVisitor);
             return copyAnalysis.GetOrComputeResultCore(cfg, cacheResult: true);
         }
