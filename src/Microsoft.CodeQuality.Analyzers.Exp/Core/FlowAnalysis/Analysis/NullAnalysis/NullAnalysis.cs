@@ -34,5 +34,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.NullAnalysis
         }
 
         internal override NullBlockAnalysisResult ToResult(BasicBlock basicBlock, DataFlowAnalysisInfo<IDictionary<AnalysisEntity, NullAbstractValue>> blockAnalysisData) => new NullBlockAnalysisResult(basicBlock, blockAnalysisData);
+        protected override NullAnalysisData GetInputData(NullBlockAnalysisResult result) => result.InputData;
     }
 }

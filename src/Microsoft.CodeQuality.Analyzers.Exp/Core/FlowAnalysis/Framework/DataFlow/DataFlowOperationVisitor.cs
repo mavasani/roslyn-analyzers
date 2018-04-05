@@ -1093,19 +1093,12 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
 
         internal TAbstractAnalysisValue VisitArray(IEnumerable<IOperation> operations, object argument)
         {
-            var values = new List<TAbstractAnalysisValue>();
             foreach (var operation in operations)
             {
-                var result = VisitOperationArrayElement(operation, argument);
-                values.Add(result);
+                _ = Visit(operation, argument);
             }
 
-            return ValueDomain.Merge(values);
-        }
-
-        internal TAbstractAnalysisValue VisitOperationArrayElement(IOperation operation, object argument)
-        {
-            return Visit(operation, argument);
+            return ValueDomain.UnknownOrMayBeValue;
         }
 
         public override TAbstractAnalysisValue Visit(IOperation operation, object argument)

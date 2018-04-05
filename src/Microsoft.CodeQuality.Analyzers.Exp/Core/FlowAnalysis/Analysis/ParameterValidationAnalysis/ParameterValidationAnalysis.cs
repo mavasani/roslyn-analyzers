@@ -54,7 +54,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.ParameterValidationAnalysis
             var pointsToAnalysisResult = PointsToAnalysis.PointsToAnalysis.GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider);
             var copyAnalysisResult = CopyAnalysis.CopyAnalysis.GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider, pointsToAnalysisResultOpt: pointsToAnalysisResult);
             // Do another analysis pass to improve the results from PointsTo and Copy analysis.
-            pointsToAnalysisResult = PointsToAnalysis.PointsToAnalysis.GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider, copyAnalysisResult);
+            pointsToAnalysisResult = PointsToAnalysis.PointsToAnalysis.GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider, pointsToAnalysisResult, copyAnalysisResult);
             return GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider, pointsToAnalysisResult, getOrComputeLocationAnalysisResultOpt, pessimisticAnalysis);
         }
 
@@ -84,5 +84,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.ParameterValidationAnalysis
         }
 
         internal override ParameterValidationBlockAnalysisResult ToResult(BasicBlock basicBlock, DataFlowAnalysisInfo<ParameterValidationAnalysisData> blockAnalysisData) => new ParameterValidationBlockAnalysisResult(basicBlock, blockAnalysisData);
+        protected override ParameterValidationAnalysisData GetInputData(ParameterValidationBlockAnalysisResult result) => result.InputData;
     }
 }

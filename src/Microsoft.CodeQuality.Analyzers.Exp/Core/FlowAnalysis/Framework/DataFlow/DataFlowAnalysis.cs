@@ -30,18 +30,21 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
         protected DataFlowOperationVisitor<TAnalysisData, TAbstractAnalysisValue> OperationVisitor { get; }
         private DataFlowAnalysisResult<NullAnalysis.NullBlockAnalysisResult, NullAnalysis.NullAbstractValue> NullAnalysisResultOpt { get; }
 
-        protected DataFlowAnalysisResult<TAnalysisResult, TAbstractAnalysisValue> GetOrComputeResultCore(ControlFlowGraph cfg, bool cacheResult)
+        protected DataFlowAnalysisResult<TAnalysisResult, TAbstractAnalysisValue> GetOrComputeResultCore(
+            ControlFlowGraph cfg,
+            bool cacheResult,
+            DataFlowAnalysisResult<TAnalysisResult, TAbstractAnalysisValue> seedResultOpt = null)
         {
             if (!cacheResult)
             {
-                return Run(cfg);
+                return Run(cfg, seedResultOpt);
             }
 
             var analysisResultsMap = s_resultCache.GetOrCreateValue(cfg.RootOperation);
-            return analysisResultsMap.GetOrAdd(OperationVisitor, _ => Run(cfg));
+            return analysisResultsMap.GetOrAdd(OperationVisitor, _ => Run(cfg, seedResultOpt));
         }
 
-        private DataFlowAnalysisResult<TAnalysisResult, TAbstractAnalysisValue> Run(ControlFlowGraph cfg)
+        private DataFlowAnalysisResult<TAnalysisResult, TAbstractAnalysisValue> Run(ControlFlowGraph cfg, DataFlowAnalysisResult<TAnalysisResult, TAbstractAnalysisValue> seedResultOpt)
         {
             var resultBuilder = new DataFlowAnalysisResultBuilder<TAnalysisData>();
 
@@ -52,20 +55,42 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             }
 
             var worklist = new Queue<BasicBlock>();
+            var pendingBlocksNeedingAtLeastOnePass = new HashSet<BasicBlock>(cfg.Blocks);
             var entry = GetEntry(cfg);
 
-            // Initialize the input of the initial block
-            // with the default abstract value of the domain.
-            UpdateInput(resultBuilder, entry, AnalysisDomain.Bottom);
+            // Are we computing the analysis data from scratch?
+            if (seedResultOpt == null)
+            {
+                // Initialize the input of the initial block
+                // with the default abstract value of the domain.
+                InitializeInputAnalysisDataForBlock(entry, AnalysisDomain.Bottom);
+            }
+            else
+            {
+                // Initialize the input and output of every block
+                // with the previously computed value.
+                foreach (var block in cfg.Blocks)
+                {
+                    InitializeInputAnalysisDataForBlock(block, GetInputData(seedResultOpt[block]));
+                }
+            }
 
-            // Add the entry block to the worklist.
+            void InitializeInputAnalysisDataForBlock(BasicBlock block, TAnalysisData initialData)
+            {
+                // Initialize the input of the block
+                // with the default abstract value of the domain.
+                UpdateInput(resultBuilder, block, initialData);
+            };
+
+            // Add the block to the worklist and ensure it gets processed at least once.
             worklist.Enqueue(entry);
-
-            while (worklist.Count > 0)
+            
+            while (worklist.Count > 0 || pendingBlocksNeedingAtLeastOnePass.Count > 0)
             {
                 // Get the next block to process
                 // and its associated result.
-                var block = worklist.Dequeue();
+                var block = worklist.Count > 0 ? worklist.Dequeue() : pendingBlocksNeedingAtLeastOnePass.ElementAt(0);
+                var needsAtLeastOnePass = pendingBlocksNeedingAtLeastOnePass.Remove(block);
 
                 // Get the outputs of all predecessor blocks of the current block.
                 var inputs = GetPredecessors(block).Select(b => GetOutput(resultBuilder[b]));
@@ -94,10 +119,10 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 // The newly computed abstract values for each basic block
                 // must be always greater or equal than the previous value
                 // to ensure termination. 
-                Debug.Assert(compare <= 0, "The newly computed abstract value must be greater or equal than the previous one.");
+                Debug.Assert(compare <= 0 || needsAtLeastOnePass && seedResultOpt != null, "The newly computed abstract value must be greater or equal than the previous one.");
 
-                // Is old input value < new input value ?
-                if (compare < 0 || block.Kind == BasicBlockKind.Entry)
+                // Is old input value < new input value OR does the basic block need at least one pass?
+                if (compare < 0 || needsAtLeastOnePass)
                 {
                     // The newly computed value is greater than the previous value,
                     // so we need to update the current block result's
@@ -116,7 +141,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                     Debug.Assert(compare <= 0, "The newly computed abstract value must be greater or equal than the previous one.");
 
                     // Is old output value < new output value ?
-                    if (compare < 0 || block.Kind == BasicBlockKind.Entry)
+                    if (compare < 0 || needsAtLeastOnePass)
                     {
                         // The newly computed value is greater than the previous value,
                         // so we need to update the current block result's
@@ -176,6 +201,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
         protected virtual IEnumerable<BasicBlock> GetSuccessors(BasicBlock block) => block.Successors;
         protected virtual TAnalysisData GetInput(DataFlowAnalysisInfo<TAnalysisData> result) => result.Input;
         protected virtual TAnalysisData GetOutput(DataFlowAnalysisInfo<TAnalysisData> result) => result.Output;
+        protected abstract TAnalysisData GetInputData(TAnalysisResult result);
 
         protected virtual void UpdateInput(DataFlowAnalysisResultBuilder<TAnalysisData> builder, BasicBlock block, TAnalysisData newInput)
         {

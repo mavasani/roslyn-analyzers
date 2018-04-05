@@ -53,5 +53,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.CopyAnalysis
         }
 
         internal override CopyBlockAnalysisResult ToResult(BasicBlock basicBlock, DataFlowAnalysisInfo<CopyAnalysisData> blockAnalysisData) => new CopyBlockAnalysisResult(basicBlock, blockAnalysisData);
+        protected override CopyAnalysisData GetInputData(CopyBlockAnalysisResult result) => result.InputData;
     }
 }

@@ -23,6 +23,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             ControlFlowGraph cfg,
             ISymbol owningSymbol,
             WellKnownTypeProvider wellKnownTypeProvider,
+            DataFlowAnalysisResult<PointsToBlockAnalysisResult, PointsToAbstractValue> pointsToAnalysisResultOpt = null,
             DataFlowAnalysisResult<CopyAnalysis.CopyBlockAnalysisResult, CopyAnalysis.CopyAbstractValue> copyAnalysisResultOpt = null,
             bool pessimisticAnalysis = true)
         {
@@ -31,9 +32,10 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             var operationVisitor = new PointsToDataFlowOperationVisitor(analysisDomain.DefaultPointsToValueGenerator, analysisDomain,
                 PointsToAbstractValueDomain.Default, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, copyAnalysisResultOpt);
             var pointsToAnalysis = new PointsToAnalysis(analysisDomain, operationVisitor);
-            return pointsToAnalysis.GetOrComputeResultCore(cfg, cacheResult: true);
+            return pointsToAnalysis.GetOrComputeResultCore(cfg, cacheResult: true, seedResultOpt: pointsToAnalysisResultOpt);
         }
 
         internal override PointsToBlockAnalysisResult ToResult(BasicBlock basicBlock, DataFlowAnalysisInfo<PointsToAnalysisData> blockAnalysisData) => new PointsToBlockAnalysisResult(basicBlock, blockAnalysisData, ((PointsToAnalysisDomain)AnalysisDomain).DefaultPointsToValueGenerator.GetDefaultPointsToValueMap());
+        protected override PointsToAnalysisData GetInputData(PointsToBlockAnalysisResult result) => result.InputData;
     }
 }

@@ -35,5 +35,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
         }
 
         internal override StringContentBlockAnalysisResult ToResult(BasicBlock basicBlock, DataFlowAnalysisInfo<StringContentAnalysisData> blockAnalysisData) => new StringContentBlockAnalysisResult(basicBlock, blockAnalysisData);
+        protected override StringContentAnalysisData GetInputData(StringContentBlockAnalysisResult result) => result.InputData;
     }
 }

@@ -68,5 +68,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.DisposeAnalysis
         }
 
         internal override DisposeBlockAnalysisResult ToResult(BasicBlock basicBlock, DataFlowAnalysisInfo<IDictionary<AbstractLocation, DisposeAbstractValue>> blockAnalysisData) => new DisposeBlockAnalysisResult(basicBlock, blockAnalysisData);
+        protected override DisposeAnalysisData GetInputData(DisposeBlockAnalysisResult result) => result.InputData;
     }
 }
