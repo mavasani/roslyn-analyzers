@@ -128,7 +128,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             protected override PointsToAnalysisData MergeAnalysisData(PointsToAnalysisData value1, PointsToAnalysisData value2)
                 => _pointsToAnalysisDomain.Merge(value1, value2);
             protected override PointsToAnalysisData MergeAnalysisDataForBackEdge(PointsToAnalysisData value1, PointsToAnalysisData value2)
-                => _pointsToAnalysisDomain.MergeAnalysisDataForBackEdge(value1, value2);
+                => _pointsToAnalysisDomain.MergeAnalysisDataForBackEdge(value1, value2, getChildAnalysisEntities: GetChildAnalysisEntities);
             protected override PointsToAnalysisData GetClonedAnalysisData(PointsToAnalysisData analysisData)
                 => GetClonedAnalysisDataHelper(analysisData);
             protected override bool Equals(PointsToAnalysisData value1, PointsToAnalysisData value2)

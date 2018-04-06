@@ -812,7 +812,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             TAnalysisData mergedAnalysisDataAtContinueStatements = MergedAnalysisDataAtContinueStatementsStack.Peek();
             if (mergedAnalysisDataAtContinueStatements != null)
             {
-                CurrentAnalysisData = MergeAnalysisData(CurrentAnalysisData, mergedAnalysisDataAtContinueStatements);
+                CurrentAnalysisData = MergeAnalysisDataForBackEdge(CurrentAnalysisData, mergedAnalysisDataAtContinueStatements);
             }
         }
 

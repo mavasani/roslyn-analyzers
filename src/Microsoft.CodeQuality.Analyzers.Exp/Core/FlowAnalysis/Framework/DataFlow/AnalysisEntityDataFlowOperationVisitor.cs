@@ -192,7 +192,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
         protected override void ResetReferenceTypeInstanceAnalysisData(PointsToAbstractValue pointsToValue)
         {
             Debug.Assert(HasPointsToAnalysisResult);
-            Debug.Assert(!pointsToValue.Locations.IsEmpty);
+            //Debug.Assert(!pointsToValue.Locations.IsEmpty);
 
             IEnumerable<AnalysisEntity> dependantAnalysisEntities = GetChildAnalysisEntities(pointsToValue);
             ResetInstanceAnalysisDataCore(dependantAnalysisEntities);
@@ -259,7 +259,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             }
         }
 
-        private IEnumerable<AnalysisEntity> GetChildAnalysisEntities(PointsToAbstractValue instanceLocationOpt)
+        protected IEnumerable<AnalysisEntity> GetChildAnalysisEntities(PointsToAbstractValue instanceLocationOpt)
         {
             // We are interested only in dependent child/member infos, not the root info.
             if (instanceLocationOpt != null)

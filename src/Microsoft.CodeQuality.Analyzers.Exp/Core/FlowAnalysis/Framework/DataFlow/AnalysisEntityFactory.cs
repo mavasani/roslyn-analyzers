@@ -299,7 +299,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
         {
             if (instanceLocationOpt == null && symbolOpt != null)
             {
-                Debug.Assert(symbolOpt.Kind == SymbolKind.Local || symbolOpt.Kind == SymbolKind.Parameter || symbolOpt.IsStatic);
+                //Debug.Assert(symbolOpt.Kind == SymbolKind.Local || symbolOpt.Kind == SymbolKind.Parameter || symbolOpt.IsStatic);
 
                 if (!_instanceLocationsForSymbols.TryGetValue(symbolOpt, out instanceLocationOpt))
                 {
