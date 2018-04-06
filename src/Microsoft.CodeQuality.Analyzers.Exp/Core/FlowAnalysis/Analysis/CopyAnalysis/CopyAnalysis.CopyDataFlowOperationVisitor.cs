@@ -27,7 +27,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.CopyAnalysis
             {
             }
 
-            protected override IEnumerable<AnalysisEntity> TrackedEntities => CurrentAnalysisData.Keys;
+            protected override void AddTrackedEntities(ImmutableArray<AnalysisEntity>.Builder builder) => builder.AddRange(CurrentAnalysisData.Keys);
 
             protected override bool HasAbstractValue(AnalysisEntity analysisEntity) => CurrentAnalysisData.ContainsKey(analysisEntity);
 

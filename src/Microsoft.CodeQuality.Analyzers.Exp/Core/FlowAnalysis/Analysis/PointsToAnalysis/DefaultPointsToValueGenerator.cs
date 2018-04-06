@@ -22,7 +22,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
 
         public PointsToAbstractValue GetOrCreateDefaultValue(AnalysisEntity analysisEntity)
         {
-            Debug.Assert(analysisEntity.Type.IsReferenceType);
+            Debug.Assert(analysisEntity.Type.IsReferenceType || analysisEntity.Type.IsNullableValueType());
             Debug.Assert(_lazyDefaultPointsToValueMap == null);
 
             if (!_defaultPointsToValueMapBuilder.TryGetValue(analysisEntity, out PointsToAbstractValue value))
@@ -35,6 +35,8 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
 
             return value;
         }
+
+        public void AddTrackedEntities(ImmutableArray<AnalysisEntity>.Builder builder) => builder.AddRange(_defaultPointsToValueMapBuilder.Keys);
 
         public ImmutableDictionary<AnalysisEntity, PointsToAbstractValue> GetDefaultPointsToValueMap()
         {

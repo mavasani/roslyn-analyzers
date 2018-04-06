@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using Analyzer.Utilities.Extensions;
 using Microsoft.CodeAnalysis.Operations.DataFlow.CopyAnalysis;
@@ -28,7 +29,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.NullAnalysis
             {
             }
 
-            protected override IEnumerable<AnalysisEntity> TrackedEntities => CurrentAnalysisData.Keys;
+            protected override void AddTrackedEntities(ImmutableArray<AnalysisEntity>.Builder builder) => builder.AddRange(CurrentAnalysisData.Keys);
 
             protected override void SetAbstractValue(AnalysisEntity analysisEntity, NullAbstractValue value)
             {

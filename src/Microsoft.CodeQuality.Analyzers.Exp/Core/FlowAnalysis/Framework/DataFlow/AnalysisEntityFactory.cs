@@ -279,7 +279,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                     {
                         // For value type allocations, we store the points to location.
                         var instancePointsToValue = _getPointsToAbstractValueOpt(instanceOpt);
-                        if (instancePointsToValue.Kind != PointsToAbstractValueKind.NoLocation)
+                        if (!ReferenceEquals(instancePointsToValue, PointsToAbstractValue.NoLocation))
                         {
                             instanceLocationOpt = instancePointsToValue;
                         }
@@ -299,7 +299,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
         {
             if (instanceLocationOpt == null && symbolOpt != null)
             {
-                Debug.Assert(symbolOpt.Kind == SymbolKind.Local || symbolOpt.Kind == SymbolKind.Parameter || symbolOpt.IsStatic);
+                //Debug.Assert(symbolOpt.Kind == SymbolKind.Local || symbolOpt.Kind == SymbolKind.Parameter || symbolOpt.IsStatic);
 
                 if (!_instanceLocationsForSymbols.TryGetValue(symbolOpt, out instanceLocationOpt))
                 {

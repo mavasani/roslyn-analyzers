@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
@@ -64,7 +65,10 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 }
             }
 
-            return Merge(forwardEdgeAnalysisData, backEdgeAnalysisData);
+            var resultMap = Merge(forwardEdgeAnalysisData, backEdgeAnalysisData);
+
+            Debug.Assert(Compare(forwardEdgeAnalysisData, resultMap) <= 0);
+            return resultMap;
         }
     }
 }

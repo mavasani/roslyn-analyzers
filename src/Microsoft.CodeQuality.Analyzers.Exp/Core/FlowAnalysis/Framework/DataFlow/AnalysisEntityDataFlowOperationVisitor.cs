@@ -17,11 +17,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
     /// </summary>
     internal abstract class AnalysisEntityDataFlowOperationVisitor<TAnalysisData, TAbstractAnalysisValue> : DataFlowOperationVisitor<TAnalysisData, TAbstractAnalysisValue>
     {
-        protected abstract IEnumerable<AnalysisEntity> TrackedEntities { get; }
-        protected abstract void SetAbstractValue(AnalysisEntity analysisEntity, TAbstractAnalysisValue value);
-        protected abstract TAbstractAnalysisValue GetAbstractValue(AnalysisEntity analysisEntity);
-        protected abstract bool HasAbstractValue(AnalysisEntity analysisEntity);
-        
         protected AnalysisEntityDataFlowOperationVisitor(
             AbstractValueDomain<TAbstractAnalysisValue> valueDomain,
             ISymbol owningSymbol,
@@ -34,6 +29,11 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                   copyAnalysisResultOpt, pointsToAnalysisResultOpt)
         {
         }
+
+        protected abstract void AddTrackedEntities(ImmutableArray<AnalysisEntity>.Builder builder);
+        protected abstract void SetAbstractValue(AnalysisEntity analysisEntity, TAbstractAnalysisValue value);
+        protected abstract TAbstractAnalysisValue GetAbstractValue(AnalysisEntity analysisEntity);
+        protected abstract bool HasAbstractValue(AnalysisEntity analysisEntity);
 
         protected override TAbstractAnalysisValue ComputeAnalysisValueForReferenceOperation(IOperation operation, TAbstractAnalysisValue defaultValue)
         {
@@ -191,7 +191,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
         protected override void ResetReferenceTypeInstanceAnalysisData(PointsToAbstractValue pointsToValue)
         {
             Debug.Assert(HasPointsToAnalysisResult);
-            Debug.Assert(!pointsToValue.Locations.IsEmpty);
 
             IEnumerable<AnalysisEntity> dependantAnalysisEntities = GetChildAnalysisEntities(pointsToValue);
             ResetInstanceAnalysisDataCore(dependantAnalysisEntities);
@@ -229,11 +228,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             {
                 // For allocations.
                 PointsToAbstractValue newValueLocation = GetPointsToAbstractValue(assignedValueOperation);
-                if (newValueLocation.Kind == PointsToAbstractValueKind.NoLocation)
-                {
-                    return;
-                }
-
                 dependentAnalysisEntities = GetChildAnalysisEntities(newValueLocation);
             }
 
@@ -263,11 +257,12 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             // We are interested only in dependent child/member infos, not the root info.
             if (instanceLocationOpt != null)
             {
-                IList<AnalysisEntity> trackedEntities = TrackedEntities?.ToList();
-                if (trackedEntities != null)
+                var trackedEntitiesBuilder = ImmutableArray.CreateBuilder<AnalysisEntity>();
+                AddTrackedEntities(trackedEntitiesBuilder);
+                if (trackedEntitiesBuilder.Count > 0)
                 {
-                    Debug.Assert(trackedEntities.ToSet().Count == trackedEntities.Count);
-                    foreach (var entity in trackedEntities)
+                    Debug.Assert(trackedEntitiesBuilder.ToSet().Count == trackedEntitiesBuilder.Count);
+                    foreach (var entity in trackedEntitiesBuilder)
                     {
                         if (entity.InstanceLocation.Equals(instanceLocationOpt) && entity.IsChildOrInstanceMember)
                         {

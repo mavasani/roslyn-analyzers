@@ -31,6 +31,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.DisposeAnalysis
                 }
                 else if (newValue == null)
                 {
+                    Debug.Fail("Compare");
                     return 1;
                 }
 
@@ -49,6 +50,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.DisposeAnalysis
                 }
                 else
                 {
+                    Debug.Fail("Compare");
                     return 1;
                 }
             }

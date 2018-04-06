@@ -51,8 +51,19 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             private static bool ShouldBeTracked(ITypeSymbol typeSymbol)
                 => typeSymbol != null && (typeSymbol.IsReferenceType || typeSymbol.IsNullableValueType());
 
-            protected override IEnumerable<AnalysisEntity> TrackedEntities => CurrentAnalysisData.Keys;
-
+            protected override void AddTrackedEntities(ImmutableArray<AnalysisEntity>.Builder builder)
+            {
+                _defaultPointsToValueGenerator.AddTrackedEntities(builder);
+                var defaultPointsToEntities = builder.ToSet();
+                foreach (var key in CurrentAnalysisData.Keys)
+                {
+                    if (!defaultPointsToEntities.Contains(key))
+                    {
+                        builder.Add(key);
+                    }
+                }
+                
+            }
             protected override bool IsPointsToAnalysis => true;
 
             protected override bool HasAbstractValue(AnalysisEntity analysisEntity) => CurrentAnalysisData.ContainsKey(analysisEntity);
@@ -67,7 +78,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 if (!CurrentAnalysisData.TryGetValue(analysisEntity, out var value))
                 {
                     value = _defaultPointsToValueGenerator.GetOrCreateDefaultValue(analysisEntity);
-                    CurrentAnalysisData.Add(analysisEntity, value);
                 }
 
                 return value;
@@ -104,7 +114,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                     switch (nullState)
                     {
                         case NullAbstractValue.Null:
-                            newPointsToValue = PointsToAbstractValue.NullLocation;
+                            newPointsToValue = existingValue.MakeNull();
                             break;
 
                         case NullAbstractValue.NotNull:
@@ -149,7 +159,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 }
                 else
                 {
-                    Debug.Assert(operation.Type == null || !operation.Type.IsValueType || defaultValue == PointsToAbstractValue.NoLocation);
+                    Debug.Assert(operation.Type == null || !operation.Type.IsNonNullableValueType() || defaultValue == PointsToAbstractValue.NoLocation);
                     return defaultValue;
                 }
             }
@@ -225,7 +235,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                     CopyAbstractValue copyValue = GetCopyAbstractValue(target);
                     if (copyValue.Kind == CopyAbstractValueKind.Known)
                     {
-                        Debug.Assert(copyValue.AnalysisEntities.Contains(targetEntity));
+                        //Debug.Assert(copyValue.AnalysisEntities.Contains(targetEntity));
                         foreach (var analysisEntity in copyValue.AnalysisEntities)
                         {
                             SetValueFromPredicate(analysisEntity, value, negatedCurrentAnalysisData, equals,
@@ -325,8 +335,8 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             #region Temporary methods to workaround lack of *real* CFG
             protected override PointsToAnalysisData MergeAnalysisData(PointsToAnalysisData value1, PointsToAnalysisData value2)
                 => _pointsToAnalysisDomain.Merge(value1, value2);
-            protected override PointsToAnalysisData MergeAnalysisDataForBackEdge(PointsToAnalysisData forwardEdgeAnalysisData)
-                => _pointsToAnalysisDomain.MergeAnalysisDataForBackEdge(forwardEdgeAnalysisData, backEdgeAnalysisData: CurrentAnalysisData, getChildAnalysisEntities: GetChildAnalysisEntities);
+            protected override PointsToAnalysisData MergeAnalysisDataForBackEdge(PointsToAnalysisData forwardEdgeAnalysisData, PointsToAnalysisData backEdgeAnalysisData)
+                => _pointsToAnalysisDomain.MergeAnalysisDataForBackEdge(forwardEdgeAnalysisData, backEdgeAnalysisData, GetChildAnalysisEntities);
             protected override PointsToAnalysisData GetClonedAnalysisData(PointsToAnalysisData analysisData)
                 => GetClonedAnalysisDataHelper(analysisData);
             protected override bool Equals(PointsToAnalysisData value1, PointsToAnalysisData value2)
@@ -486,7 +496,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 var _ = base.VisitArrayInitializer(operation, argument);
 
                 // We should have created a new PointsTo value for the associated array creation operation.
-                return GetCachedAbstractValue((IArrayCreationOperation)operation.Parent);
+                return GetCachedAbstractValue(operation.GetAncestor<IArrayCreationOperation>(OperationKind.ArrayCreation));
             }
 
             public override PointsToAbstractValue VisitArrayCreation(IArrayCreationOperation operation, object argument)
@@ -596,7 +606,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                         return defaultValue.MakeNonNull(operation);
 
                     case NullAbstractValue.Null:
-                        return PointsToAbstractValue.NullLocation;
+                        return defaultValue.MakeNull();
 
                     default:
                         return defaultValue;
@@ -655,7 +665,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                         Debug.Assert(!alwaysSucceed || !alwaysFail);
                         if (alwaysFail)
                         {
-                            value = PointsToAbstractValue.NullLocation;
+                            value = value.MakeNull();
                         }
                         else if (operation.IsTryCast && !alwaysSucceed)
                         {

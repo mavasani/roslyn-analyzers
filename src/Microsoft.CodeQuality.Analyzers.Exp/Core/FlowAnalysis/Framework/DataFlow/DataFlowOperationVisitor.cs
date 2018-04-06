@@ -424,6 +424,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 bool IsInterfaceOrTypeParameter(ITypeSymbol type) => type.TypeKind == TypeKind.Interface || type.TypeKind == TypeKind.TypeParameter;
                 if (!IsInterfaceOrTypeParameter(operation.Type) &&
                     pointsToValue.Locations.All(location => location.IsNull ||
+                        location.IsNoLocation ||
                         (!IsInterfaceOrTypeParameter(location.LocationTypeOpt) &&
                          !operation.Type.DerivesFrom(location.LocationTypeOpt) &&
                          !location.LocationTypeOpt.DerivesFrom(operation.Type))))
@@ -443,7 +444,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 {
                     // Infer if a TryCast will always succeed.
                     if (operation.IsTryCast &&
-                        pointsToValue.Locations.All(location => !location.IsNull && location.LocationTypeOpt.DerivesFrom(operation.Type)))
+                        pointsToValue.Locations.All(location => location.IsNoLocation || !location.IsNull && location.LocationTypeOpt.DerivesFrom(operation.Type)))
                     {
                         // TryCast which is guaranteed to succeed, and potentially can be changed to DirectCast.
                         if (PredicateAnalysis)
@@ -601,8 +602,8 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
         protected Stack<TAnalysisData> NegatedCurrentAnalysisDataStack { get; }
 
         protected abstract TAnalysisData MergeAnalysisData(TAnalysisData value1, TAnalysisData value2);
-        protected virtual TAnalysisData MergeAnalysisDataForBackEdge(TAnalysisData forwardEdgeAnalysisData)
-            => MergeAnalysisData(forwardEdgeAnalysisData, CurrentAnalysisData);
+        protected virtual TAnalysisData MergeAnalysisDataForBackEdge(TAnalysisData forwardEdgeAnalysisData, TAnalysisData backEdgeAnalysisData)
+            => MergeAnalysisData(forwardEdgeAnalysisData, backEdgeAnalysisData);
         protected abstract TAnalysisData GetClonedAnalysisData(TAnalysisData analysisData);
         protected TAnalysisData GetClonedCurrentAnalysisData() => GetClonedAnalysisData(CurrentAnalysisData);
         protected abstract bool Equals(TAnalysisData value1, TAnalysisData value2);
@@ -806,7 +807,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             TAnalysisData mergedAnalysisDataAtContinueStatements = MergedAnalysisDataAtContinueStatementsStack.Peek();
             if (mergedAnalysisDataAtContinueStatements != null)
             {
-                CurrentAnalysisData = MergeAnalysisData(CurrentAnalysisData, mergedAnalysisDataAtContinueStatements);
+                CurrentAnalysisData = MergeAnalysisDataForBackEdge(forwardEdgeAnalysisData: mergedAnalysisDataAtContinueStatements, backEdgeAnalysisData: CurrentAnalysisData);
             }
         }
 
@@ -867,7 +868,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 else if (previousIterationAnalysisData != null)
                 {
                     // We are going to execute the non-first loop iteration of bottom loop.
-                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData);
+                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(forwardEdgeAnalysisData: beforeLoopAnalysisData, backEdgeAnalysisData: CurrentAnalysisData);
                 }
 
                 var unusedBodyValue = Visit(operation.Body, argument);
@@ -882,7 +883,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 else
                 {
                     // We are going to execute the non-first loop iteration of top loop.
-                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData);
+                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(forwardEdgeAnalysisData: beforeLoopAnalysisData, backEdgeAnalysisData: CurrentAnalysisData);
                 }
             }
 
@@ -909,7 +910,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 if (previousIterationAnalysisData != null)
                 {
                     // We are going to execute the non-first loop iteration.
-                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData);
+                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(forwardEdgeAnalysisData: beforeLoopAnalysisData, backEdgeAnalysisData: CurrentAnalysisData);
                 }
 
                 if (PredicateAnalysis)
@@ -960,7 +961,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 if (previousIterationAnalysisData != null)
                 {
                     // We are going to execute the non-first loop iteration.
-                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData);
+                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(forwardEdgeAnalysisData: beforeLoopAnalysisData, backEdgeAnalysisData: CurrentAnalysisData);
                 }
 
                 MergeAnalysisDataFromContinueStatements();
@@ -995,7 +996,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 if (previousIterationAnalysisData != null)
                 {
                     // We are going to execute the non-first loop iteration.
-                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(beforeLoopAnalysisData);
+                    CurrentAnalysisData = MergeAnalysisDataForBackEdge(forwardEdgeAnalysisData: beforeLoopAnalysisData, backEdgeAnalysisData: CurrentAnalysisData);
                 }
 
                 MergeAnalysisDataFromContinueStatements();
@@ -1251,7 +1252,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
 
         public override TAbstractAnalysisValue VisitArrayInitializer(IArrayInitializerOperation operation, object argument)
         {
-            var arrayCreation = (IArrayCreationOperation)operation.Parent;
+            var arrayCreation = operation.GetAncestor<IArrayCreationOperation>(OperationKind.ArrayCreation);
             var elementType = ((IArrayTypeSymbol)arrayCreation.Type).ElementType;
             for (int index = 0; index < operation.ElementValues.Length; index++)
             {
@@ -1497,8 +1498,8 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                     {
                         // 1. "static bool object.ReferenceEquals(o1, o2)"
                         // 2. "static bool object.Equals(o1, o2)"
-                        leftOperand = operation.Arguments[0];
-                        rightOperand = operation.Arguments[1];
+                        leftOperand = operation.Arguments[0].Value;
+                        rightOperand = operation.Arguments[1].Value;
                         isReferenceEquality = operation.TargetMethod.Name == "ReferenceEquals" ||
                             (AnalysisEntityFactory.TryCreate(operation.Arguments[0].Value, out var analysisEntity) &&
                              !analysisEntity.Type.HasValueCopySemantics() &&
@@ -1515,7 +1516,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                              IsOverrideOrImplementationOfEquatableEquals(operation.TargetMethod)))
                         {
                             leftOperand = operation.Instance;
-                            rightOperand = operation.Arguments[0];
+                            rightOperand = operation.Arguments[0].Value;
                             isReferenceEquality = operation.TargetMethod.IsObjectEquals();
                         }
                     }

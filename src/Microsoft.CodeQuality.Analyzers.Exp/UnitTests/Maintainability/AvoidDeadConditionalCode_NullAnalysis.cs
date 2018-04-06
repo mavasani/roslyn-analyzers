@@ -5907,5 +5907,37 @@ public class Test
             // Test0.cs(48,14): warning CA1508: 'c.Equals(c2)' is always 'true'. Remove or refactor the condition(s) to avoid dead code.
             GetCSharpResultAt(48, 14, "c.Equals(c2)", "true"));
         }
+
+        [Trait(Traits.DataflowAnalysis, Traits.Dataflow.NullAnalysis)]
+        [Fact]
+        public void MultidimensionalArray_NoDiagnostic()
+        {
+            VerifyCSharp(@"
+class Test
+{
+    void M()
+    {
+        var x = new int[,] { { 1, 2 }, { 2, 3 } };
+        if (x == null)
+        {
+        }
+    }
+}
+",
+            // Test0.cs(7,13): warning CA1508: 'x == null' is always 'false'. Remove or refactor the condition(s) to avoid dead code.
+            GetCSharpResultAt(7, 13, "x == null", "false"));
+
+            VerifyBasic(@"
+Class Test
+    Private Sub M()
+        Dim x = New Integer(,) { { 1, 2 }, { 2, 3 } }
+        If x Is Nothing Then
+        End If
+    End Sub
+End Class
+",
+            // Test0.vb(5,12): warning CA1508: 'x Is Nothing' is always 'False'. Remove or refactor the condition(s) to avoid dead code.
+            GetBasicResultAt(5, 12, "x Is Nothing", "False"));
+        }
     }
 }
