@@ -23,16 +23,15 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
                 ISymbol owningSymbol,
                 WellKnownTypeProvider wellKnownTypeProvider,
                 bool pessimisticAnalysis,
-                DataFlowAnalysisResult<CopyBlockAnalysisResult, CopyAbstractValue> copyAnalysisResultOpt,
                 DataFlowAnalysisResult<PointsToAnalysis.PointsToBlockAnalysisResult, PointsToAnalysis.PointsToAbstractValue> pointsToAnalysisResultOpt)
                 : base(valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis: true,
-                      copyAnalysisResultOpt: copyAnalysisResultOpt, pointsToAnalysisResultOpt: pointsToAnalysisResultOpt)
+                      pointsToAnalysisResultOpt: pointsToAnalysisResultOpt)
             {
             }
 
             protected override void AddTrackedEntities(ImmutableArray<AnalysisEntity>.Builder builder) => builder.AddRange(CurrentAnalysisData.Keys);
 
-            protected override void SetAbstractValue(AnalysisEntity analysisEntity, StringContentAbstractValue value) => SetAbstractValue(CurrentAnalysisData, analysisEntity, value);
+            protected override void SetAbstractValue(AnalysisEntity analysisEntity, StringContentAbstractValue value, AnalysisEntity valueEntityOpt) => SetAbstractValue(CurrentAnalysisData, analysisEntity, value);
 
             private static void SetAbstractValue(StringContentAnalysisData analysisData, AnalysisEntity analysisEntity, StringContentAbstractValue value) => analysisData[analysisEntity] = value;
 
@@ -90,19 +89,11 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
                         stringContentValue = newStringContentValue;
                     }
 
-                    CopyAbstractValue copyValue = GetCopyAbstractValue(target);
-                    if (copyValue.Kind == CopyAbstractValueKind.Known)
+                    SetAbstractValue(analysisData, targetEntity, stringContentValue);
+                    foreach (var copyEntity in GetCopyEntities(target))
                     {
-                        Debug.Assert(copyValue.AnalysisEntities.Contains(targetEntity));
-                        foreach (var analysisEntity in copyValue.AnalysisEntities)
-                        {
-                            SetAbstractValue(analysisData, analysisEntity, stringContentValue);
-                        }
+                        SetAbstractValue(analysisData, copyEntity, stringContentValue);
                     }
-                    else
-                    {
-                        SetAbstractValue(analysisData, targetEntity, stringContentValue);
-                    }                    
                 }
             }
 

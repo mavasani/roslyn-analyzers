@@ -28,7 +28,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.NullAnalysis
             DataFlowAnalysisResult<PointsToAnalysis.PointsToBlockAnalysisResult, PointsToAnalysis.PointsToAbstractValue> pointsToAnalysisResultOpt = null)
         {
             var operationVisitor = new NullDataFlowOperationVisitor(NullAbstractValueDomain.Default, owningSymbol,
-                wellKnownTypeProvider, pessimisticAnalysis, copyAnalysisResultOpt, pointsToAnalysisResultOpt);
+                wellKnownTypeProvider, pessimisticAnalysis, pointsToAnalysisResultOpt);
             var nullAnalysis = new NullAnalysis(NullAnalysisDomainInstance, operationVisitor);
             return nullAnalysis.GetOrComputeResultCore(cfg, cacheResult: true);
         }

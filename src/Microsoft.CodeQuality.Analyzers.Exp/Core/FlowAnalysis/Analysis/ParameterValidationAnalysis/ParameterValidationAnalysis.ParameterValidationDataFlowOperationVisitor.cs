@@ -33,7 +33,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.ParameterValidationAnalysis
                 DataFlowAnalysisResult<PointsToBlockAnalysisResult, PointsToAbstractValue> pointsToAnalysisResult,
                 bool pessimisticAnalysis,
                 bool trackHazardousParameterUsages = false)
-                : base(valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis: false, copyAnalysisResultOpt: null, pointsToAnalysisResultOpt: pointsToAnalysisResult)
+                : base(valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis: false, pointsToAnalysisResultOpt: pointsToAnalysisResult)
             {
                 Debug.Assert(owningSymbol.Kind == SymbolKind.Method);
                 Debug.Assert(pointsToAnalysisResult != null);

@@ -52,9 +52,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.ParameterValidationAnalysis
         {
             var cfg = ControlFlowGraph.Create(topmostBlock);
             var pointsToAnalysisResult = PointsToAnalysis.PointsToAnalysis.GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider);
-            var copyAnalysisResult = CopyAnalysis.CopyAnalysis.GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider, pointsToAnalysisResultOpt: pointsToAnalysisResult);
-            // Do another analysis pass to improve the results from PointsTo and Copy analysis.
-            pointsToAnalysisResult = PointsToAnalysis.PointsToAnalysis.GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider, pointsToAnalysisResult, copyAnalysisResult);
             return GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider, pointsToAnalysisResult, getOrComputeLocationAnalysisResultOpt, pessimisticAnalysis);
         }
 

@@ -77,10 +77,7 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Maintainability
                             var cfg = ControlFlowGraph.Create(topmostBlock);
                             var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(operationBlockStartContext.Compilation);
                             var pointsToAnalysisResult = PointsToAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider);
-                            var copyAnalysisResult = CopyAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, pointsToAnalysisResultOpt: pointsToAnalysisResult);
-                            // Do another analysis pass to improve the results from PointsTo and Copy analysis.
-                            pointsToAnalysisResult = PointsToAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, pointsToAnalysisResult, copyAnalysisResult);
-                            var stringContentAnalysisResult = StringContentAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, copyAnalysisResult, pointsToAnalysisResult);
+                            var stringContentAnalysisResult = StringContentAnalysis.GetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider, pointsToAnalysisResult);
 
                             operationBlockStartContext.RegisterOperationAction(operationContext =>
                             {
@@ -141,12 +138,6 @@ namespace Microsoft.CodeQuality.Analyzers.Exp.Maintainability
                                     invocationOperation.Type?.SpecialType == SpecialType.System_Boolean)
                                 {
                                     PredicateValueKind predicateKind = pointsToAnalysisResult.GetPredicateKind(operation);
-                                    if (predicateKind != PredicateValueKind.Unknown)
-                                    {
-                                        return predicateKind;
-                                    }
-
-                                    predicateKind = copyAnalysisResult.GetPredicateKind(operation);
                                     if (predicateKind != PredicateValueKind.Unknown)
                                     {
                                         return predicateKind;

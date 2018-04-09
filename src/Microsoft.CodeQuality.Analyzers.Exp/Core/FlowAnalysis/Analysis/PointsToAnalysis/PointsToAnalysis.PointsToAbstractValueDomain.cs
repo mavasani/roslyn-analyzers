@@ -16,6 +16,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
         {
             public static PointsToAbstractValueDomain Default = new PointsToAbstractValueDomain();
             private readonly SetAbstractDomain<AbstractLocation> _locationsDomain = new SetAbstractDomain<AbstractLocation>();
+            private readonly SetAbstractDomain<AnalysisEntity> _entitiesDomain = new SetAbstractDomain<AnalysisEntity>();
 
             private PointsToAbstractValueDomain() { }
 
@@ -38,13 +39,14 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 if (oldValue.Kind == newValue.Kind)
                 {
                     int locationsCompareResult = _locationsDomain.Compare(oldValue.Locations, newValue.Locations);
-                    var nullCompareResult = NullAnalysis.NullAbstractValueDomain.Default.Compare(oldValue.NullState, newValue.NullState);
-                    if (locationsCompareResult > 0 || nullCompareResult > 0)
+                    int nullCompareResult = NullAnalysis.NullAbstractValueDomain.Default.Compare(oldValue.NullState, newValue.NullState);
+                    int copyCompareResult = _entitiesDomain.Compare(oldValue.CopyEntities, newValue.CopyEntities) * -1;
+                    if (locationsCompareResult > 0 || nullCompareResult > 0 || copyCompareResult > 0)
                     {
                         Debug.Fail("Compare");
                         return 1;
                     }
-                    else if (locationsCompareResult < 0 || nullCompareResult < 0)
+                    else if (locationsCompareResult < 0 || nullCompareResult < 0 || copyCompareResult < 0)
                     {
                         return -1;
                     }
@@ -56,6 +58,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 else if (oldValue.Kind < newValue.Kind)
                 {
                     Debug.Assert(NullAnalysis.NullAbstractValueDomain.Default.Compare(oldValue.NullState, newValue.NullState) <= 0);
+                    Debug.Assert(_entitiesDomain.Compare(oldValue.CopyEntities, newValue.CopyEntities) > 0);
                     return -1;
                 }
                 else
@@ -90,12 +93,10 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
 
                 var mergedLocations = _locationsDomain.Merge(value1.Locations, value2.Locations);
                 var mergedNullState = NullAnalysis.NullAbstractValueDomain.Default.Merge(value1.NullState, value2.NullState);
-                var result = PointsToAbstractValue.Create(mergedLocations, mergedNullState);
-
+                var mergedCopyEntities = _entitiesDomain.Intersect(value1.CopyEntities, value2.CopyEntities);
+                var result = PointsToAbstractValue.Create(mergedLocations, mergedNullState, mergedCopyEntities);
                 Debug.Assert(Compare(value1, result) <= 0);
-                var compare2Result = Compare(value2, result);
-                Debug.Assert(compare2Result <= 0);
-
+                Debug.Assert(Compare(value2, result) <= 0);
                 return result;
             }
         }

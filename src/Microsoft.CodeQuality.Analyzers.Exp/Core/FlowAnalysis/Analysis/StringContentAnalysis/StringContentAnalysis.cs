@@ -24,12 +24,11 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
             ControlFlowGraph cfg,
             ISymbol owningSymbol,
             WellKnownTypeProvider wellKnownTypeProvider,
-            DataFlowAnalysisResult<CopyAnalysis.CopyBlockAnalysisResult, CopyAnalysis.CopyAbstractValue> copyAnalysisResultOpt,
             DataFlowAnalysisResult<PointsToAnalysis.PointsToBlockAnalysisResult, PointsToAnalysis.PointsToAbstractValue> pointsToAnalysisResultOpt = null,
             bool pessimisticAnalsysis = true)
         {
             var operationVisitor = new StringContentDataFlowOperationVisitor(StringContentAbstractValueDomain.Default, owningSymbol,
-                wellKnownTypeProvider, pessimisticAnalsysis, copyAnalysisResultOpt, pointsToAnalysisResultOpt);
+                wellKnownTypeProvider, pessimisticAnalsysis, pointsToAnalysisResultOpt);
             var nullAnalysis = new StringContentAnalysis(StringContentAnalysisDomainInstance, operationVisitor);
             return nullAnalysis.GetOrComputeResultCore(cfg, cacheResult: false);
         }

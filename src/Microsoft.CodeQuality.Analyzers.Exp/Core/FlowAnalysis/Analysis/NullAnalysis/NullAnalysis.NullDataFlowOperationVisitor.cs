@@ -23,15 +23,14 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.NullAnalysis
                 ISymbol owningSymbol,
                 WellKnownTypeProvider wellKnownTypeProvider,
                 bool pessimisticAnalysis,
-                DataFlowAnalysisResult<CopyBlockAnalysisResult, CopyAbstractValue> copyAnalysisResultOpt,
                 DataFlowAnalysisResult<PointsToAnalysis.PointsToBlockAnalysisResult, PointsToAnalysis.PointsToAbstractValue> pointsToAnalysisResultOpt)
-                : base(valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis: true, copyAnalysisResultOpt: copyAnalysisResultOpt, pointsToAnalysisResultOpt: pointsToAnalysisResultOpt)
+                : base(valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis: true, pointsToAnalysisResultOpt: pointsToAnalysisResultOpt)
             {
             }
 
             protected override void AddTrackedEntities(ImmutableArray<AnalysisEntity>.Builder builder) => builder.AddRange(CurrentAnalysisData.Keys);
 
-            protected override void SetAbstractValue(AnalysisEntity analysisEntity, NullAbstractValue value)
+            protected override void SetAbstractValue(AnalysisEntity analysisEntity, NullAbstractValue value, AnalysisEntity valueEntityOpt)
             {
                 SetAbstractValue(CurrentAnalysisData, analysisEntity, value);
 
@@ -128,19 +127,19 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.NullAnalysis
                         }
                     }
 
-                    CopyAbstractValue copyValue = GetCopyAbstractValue(target);
-                    if (copyValue.Kind == CopyAbstractValueKind.Known)
-                    {
-                        Debug.Assert(copyValue.AnalysisEntities.Contains(targetEntity));
-                        foreach (var analysisEntity in copyValue.AnalysisEntities)
-                        {
-                            SetValueFromPredicate(analysisEntity, nullValue, negatedCurrentAnalysisData, equals, inferInCurrentAnalysisData, inferInNegatedCurrentAnalysisData, ref predicateValueKind);
-                        }
-                    }
-                    else
-                    {
-                        SetValueFromPredicate(targetEntity, nullValue, negatedCurrentAnalysisData, equals, inferInCurrentAnalysisData, inferInNegatedCurrentAnalysisData, ref predicateValueKind);
-                    }
+                    //CopyAbstractValue copyValue = GetCopyAbstractValue(target);
+                    //if (copyValue.Kind == CopyAbstractValueKind.Known)
+                    //{
+                    //    Debug.Assert(copyValue.AnalysisEntities.Contains(targetEntity));
+                    //    foreach (var analysisEntity in copyValue.AnalysisEntities)
+                    //    {
+                    //        SetValueFromPredicate(analysisEntity, nullValue, negatedCurrentAnalysisData, equals, inferInCurrentAnalysisData, inferInNegatedCurrentAnalysisData, ref predicateValueKind);
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    SetValueFromPredicate(targetEntity, nullValue, negatedCurrentAnalysisData, equals, inferInCurrentAnalysisData, inferInNegatedCurrentAnalysisData, ref predicateValueKind);
+                    //}
 
                     return true;
                 }

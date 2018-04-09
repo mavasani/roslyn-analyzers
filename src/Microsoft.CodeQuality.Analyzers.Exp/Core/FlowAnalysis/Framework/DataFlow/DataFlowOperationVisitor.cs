@@ -19,7 +19,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
     /// </summary>
     internal abstract class DataFlowOperationVisitor<TAnalysisData, TAbstractAnalysisValue> : OperationVisitor<object, TAbstractAnalysisValue>
     {
-        private readonly DataFlowAnalysisResult<CopyBlockAnalysisResult, CopyAbstractValue> _copyAnalysisResultOpt;
         private readonly DataFlowAnalysisResult<PointsToBlockAnalysisResult, PointsToAbstractValue> _pointsToAnalysisResultOpt;
         private readonly ImmutableDictionary<IOperation, TAbstractAnalysisValue>.Builder _valueCacheBuilder;
         private readonly ImmutableDictionary<IOperation, PredicateValueKind>.Builder _predicateValueKindCacheBuilder;
@@ -88,7 +87,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             WellKnownTypeProvider wellKnownTypeProvider,
             bool pessimisticAnalysis,
             bool predicateAnalysis,
-            DataFlowAnalysisResult<CopyBlockAnalysisResult, CopyAbstractValue> copyAnalysisResultOpt,
             DataFlowAnalysisResult<PointsToBlockAnalysisResult, PointsToAbstractValue> pointsToAnalysisResultOpt)
         {
             Debug.Assert(owningSymbol != null);
@@ -103,7 +101,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             WellKnownTypeProvider = wellKnownTypeProvider;
             PessimisticAnalysis = pessimisticAnalysis;
             PredicateAnalysis = predicateAnalysis;
-            _copyAnalysisResultOpt = copyAnalysisResultOpt;
             _pointsToAnalysisResultOpt = pointsToAnalysisResultOpt;
             _valueCacheBuilder = ImmutableDictionary.CreateBuilder<IOperation, TAbstractAnalysisValue>();
             _predicateValueKindCacheBuilder = ImmutableDictionary.CreateBuilder<IOperation, PredicateValueKind>();
@@ -129,8 +126,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 HashUtilities.Combine(WellKnownTypeProvider.Compilation.GetHashCode(),
                 HashUtilities.Combine(PessimisticAnalysis.GetHashCode(),
                 HashUtilities.Combine(PredicateAnalysis.GetHashCode(),
-                HashUtilities.Combine(_copyAnalysisResultOpt?.GetHashCode() ?? 0,
-                    _pointsToAnalysisResultOpt?.GetHashCode() ?? 0)))))));
+                    _pointsToAnalysisResultOpt?.GetHashCode() ?? 0))))));
         }
 
         private static PointsToAbstractValue GetThisOrMeInstancePointsToValue(ISymbol owningSymbol)
@@ -281,18 +277,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
         }
 
         protected NullAbstractValue GetNullAbstractValue(IOperation operation) => GetPointsToAbstractValue(operation).NullState;
-
-        protected virtual CopyAbstractValue GetCopyAbstractValue(IOperation operation)
-        {
-            if (_copyAnalysisResultOpt == null)
-            {
-                return CopyAbstractValue.Unknown;
-            }
-            else
-            {
-                return _copyAnalysisResultOpt[operation];
-            }
-        }
+        protected ImmutableHashSet<AnalysisEntity> GetCopyEntities(IOperation operation) => GetPointsToAbstractValue(operation).CopyEntities;
 
         protected virtual PointsToAbstractValue GetPointsToAbstractValue(IOperation operation)
         {

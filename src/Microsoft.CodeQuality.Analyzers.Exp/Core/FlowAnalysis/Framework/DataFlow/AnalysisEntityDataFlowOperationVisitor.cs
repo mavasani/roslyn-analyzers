@@ -23,15 +23,13 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             WellKnownTypeProvider wellKnownTypeProvider,
             bool pessimisticAnalysis,
             bool predicateAnalysis,
-            DataFlowAnalysisResult<CopyBlockAnalysisResult, CopyAbstractValue> copyAnalysisResultOpt,
             DataFlowAnalysisResult<PointsToBlockAnalysisResult, PointsToAbstractValue> pointsToAnalysisResultOpt)
-            : base (valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis,
-                  copyAnalysisResultOpt, pointsToAnalysisResultOpt)
+            : base (valueDomain, owningSymbol, wellKnownTypeProvider, pessimisticAnalysis, predicateAnalysis, pointsToAnalysisResultOpt)
         {
         }
 
         protected abstract void AddTrackedEntities(ImmutableArray<AnalysisEntity>.Builder builder);
-        protected abstract void SetAbstractValue(AnalysisEntity analysisEntity, TAbstractAnalysisValue value);
+        protected abstract void SetAbstractValue(AnalysisEntity analysisEntity, TAbstractAnalysisValue value, AnalysisEntity valueEntityOpt = null);
         protected abstract TAbstractAnalysisValue GetAbstractValue(AnalysisEntity analysisEntity);
         protected abstract bool HasAbstractValue(AnalysisEntity analysisEntity);
 
@@ -149,7 +147,14 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
                 }
             }
 
-            SetAbstractValue(targetAnalysisEntity, assignedValue);
+            AnalysisEntity assignedValueEntity;
+            if (assignedValueOperation == null ||
+                !AnalysisEntityFactory.TryCreate(assignedValueOperation, out assignedValueEntity))
+            {
+                assignedValueEntity = null;
+            }
+
+            SetAbstractValue(targetAnalysisEntity, assignedValue, assignedValueEntity);
         }
 
         protected override void SetValueForParameterOnEntry(IParameterSymbol parameter, AnalysisEntity analysisEntity)
