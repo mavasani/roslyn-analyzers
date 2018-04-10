@@ -8,14 +8,14 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
     internal enum PointsToAbstractValueKind
     {
         /// <summary>
-        /// Undefined value.
-        /// </summary>
-        Undefined,
-
-        /// <summary>
         /// Invalid value based on predicate analysis.
         /// </summary>
         Invalid,
+
+        /// <summary>
+        /// Undefined value.
+        /// </summary>
+        Undefined,
 
         /// <summary>
         /// Points to one or more known possible locations.

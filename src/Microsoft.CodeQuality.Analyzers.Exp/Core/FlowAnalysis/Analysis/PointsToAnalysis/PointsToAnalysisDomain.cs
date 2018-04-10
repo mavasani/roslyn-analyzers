@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using Analyzer.Utilities.Extensions;
@@ -13,7 +14,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
     /// <summary>
     /// An abstract analysis domain implementation <see cref="PointsToAnalysis"/>.
     /// </summary>
-    internal class PointsToAnalysisDomain: AnalysisEntityMapAbstractDomain<PointsToAbstractValue>
+    internal class PointsToAnalysisDomain : AnalysisEntityMapAbstractDomain<PointsToAbstractValue>
     {
         public PointsToAnalysisDomain(DefaultPointsToValueGenerator defaultPointsToValueGenerator, AbstractValueDomain<PointsToAbstractValue> valueDomain)
             : base(valueDomain)
@@ -82,6 +83,27 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             var resultMap = base.MergeCore(map1, map2);
             PointsToAnalysis.AssertValidCopyAnalysisData(resultMap);
             return resultMap;
+        }
+
+        protected override void HandleNewMergeKey(PointsToAnalysisData resultMap, AnalysisEntity newKey)
+        {
+            var newValue = resultMap[newKey];
+            if (newValue.Kind == PointsToAbstractValueKind.Unknown)
+            {
+                resultMap.Remove(newKey);
+            }
+            else if (!newValue.CopyEntities.IsEmpty)
+            {
+                newValue = newValue.WithCopyEntities(ImmutableHashSet<AnalysisEntity>.Empty);
+                if (newValue.Kind == PointsToAbstractValueKind.Unknown)
+                {
+                    resultMap.Remove(newKey);
+                }
+                else
+                {
+                    resultMap[newKey] = newValue;
+                }
+            }
         }
     }
 }

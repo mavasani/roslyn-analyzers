@@ -17,6 +17,9 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
         }
 
         protected virtual TValue GetDefaultValue(AnalysisEntity analysisEntity) => ValueDomain.UnknownOrMayBeValue;
+        protected virtual void HandleNewMergeKey(IDictionary<AnalysisEntity, TValue> resultMap, AnalysisEntity newKey)
+        {
+        }
 
         protected override IDictionary<AnalysisEntity, TValue> MergeCore(IDictionary<AnalysisEntity, TValue> map1, IDictionary<AnalysisEntity, TValue> map2)
         {
@@ -131,9 +134,14 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             {
                 Debug.Assert(!map1.ContainsKey(newKey));
                 Debug.Assert(!map2.ContainsKey(newKey));
-                if (ReferenceEquals(resultMap[newKey], GetDefaultValue(newKey)))
+                var newValue = resultMap[newKey];
+                if (ReferenceEquals(newValue, GetDefaultValue(newKey)))
                 {
                     resultMap.Remove(newKey);
+                }
+                else
+                {
+                    HandleNewMergeKey(resultMap, newKey);
                 }
             }
 

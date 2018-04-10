@@ -39,7 +39,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
 
             public override PointsToAnalysisData Flow(IOperation statement, BasicBlock block, PointsToAnalysisData input)
             {
-                if (input != null)
+                if (input != null && !HasAbstractValue(AnalysisEntityFactory.ThisOrMeInstance))
                 {
                     // Always set the PointsTo value for the "this" or "Me" instance.
                     input[AnalysisEntityFactory.ThisOrMeInstance] = ThisOrMePointsToAbstractValue;
@@ -139,8 +139,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                     {
                         Debug.Assert(copyEntity != analysisEntity);
                         var oldCopyEntityValue = GetAbstractValue(analysisData, copyEntity, defaultPointsToValueGenerator);
-                        var defaultEntityValue = ShouldPointsToLocationsBeTracked(copyEntity.Type) ? PointsToAbstractValue.Unknown : PointsToAbstractValue.NoLocation;
-                        var newCopyEntityValue = add ? oldCopyEntityValue.WithAddedCopyEntity(analysisEntity, defaultEntityValue) : oldCopyEntityValue.WithRemovedCopyEntity(analysisEntity, defaultEntityValue);
+                        var newCopyEntityValue = add ? oldCopyEntityValue.WithAddedCopyEntity(analysisEntity) : oldCopyEntityValue.WithRemovedCopyEntity(analysisEntity);
                         SetAbstractValueCore(analysisData, copyEntity, newCopyEntityValue, oldCopyEntityValue);
                     }
                 };
@@ -154,6 +153,11 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 DefaultPointsToValueGenerator defaultPointsToValueGenerator,
                 bool fromCopyPredicateAnalysis = false)
             {
+                if (assignedValue.Kind == PointsToAbstractValueKind.Unknown)
+                {
+                    return assignedValue;
+                }
+
                 ImmutableHashSet<AnalysisEntity> assignedValueCopyEntities;
 
                 // Don't track entities if do not know about it's instance location.
@@ -164,7 +168,8 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 else
                 {
                     assignedValueCopyEntities = assignedValue.CopyEntities;
-                    if (valueEntityOpt != null && !valueEntityOpt.HasUnknownInstanceLocation)
+                    if (valueEntityOpt != null &&
+                        !valueEntityOpt.HasUnknownInstanceLocation)
                     {
                         assignedValueCopyEntities = assignedValueCopyEntities.Add(valueEntityOpt);
                     }
@@ -179,8 +184,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                     }
                 }
 
-                var defaultValue = ShouldPointsToLocationsBeTracked(analysisEntity.Type) ? PointsToAbstractValue.Unknown : PointsToAbstractValue.NoLocation;
-                return assignedValue.WithCopyEntities(assignedValueCopyEntities, defaultValue);
+                return assignedValue.WithCopyEntities(assignedValueCopyEntities);
             }
 
             private static bool SetAbstractValueCore(

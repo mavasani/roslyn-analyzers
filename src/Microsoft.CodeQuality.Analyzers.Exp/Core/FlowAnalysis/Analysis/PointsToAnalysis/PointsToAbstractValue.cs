@@ -59,9 +59,10 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 copyEntities: ImmutableHashSet<AnalysisEntity>.Empty);
         }
 
-        public static PointsToAbstractValue Create(ImmutableHashSet<AbstractLocation> locations, NullAbstractValue nullState, ImmutableHashSet<AnalysisEntity> copyEntities)
+        public static PointsToAbstractValue Create(ImmutableHashSet<AbstractLocation> locations, NullAbstractValue nullState, ImmutableHashSet<AnalysisEntity> copyEntities, PointsToAbstractValueKind kind)
         {
             Debug.Assert(!locations.IsEmpty || !copyEntities.IsEmpty);
+            Debug.Assert(kind != PointsToAbstractValueKind.Unknown);
 
             if (locations.Count == 1 && copyEntities.IsEmpty)
             {
@@ -76,7 +77,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 }
             }
 
-            return new PointsToAbstractValue(locations, nullState, copyEntities);
+            return new PointsToAbstractValue(locations, nullState, copyEntities, kind);
         }
 
         public PointsToAbstractValue MakeNonNull(IOperation operation)
@@ -141,13 +142,15 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             return new PointsToAbstractValue(Locations, NullAbstractValue.Invalid, CopyEntities, kind: PointsToAbstractValueKind.Invalid);
         }
 
-        public PointsToAbstractValue WithAddedCopyEntity(AnalysisEntity addedEntity, PointsToAbstractValue defaultValue)
+        public PointsToAbstractValue WithAddedCopyEntity(AnalysisEntity addedEntity)
         {
+            Debug.Assert(Kind != PointsToAbstractValueKind.Unknown);
+
             var newCopyEntities = CopyEntities.Add(addedEntity);
-            return WithCopyEntities(newCopyEntities, defaultValue);
+            return WithCopyEntities(newCopyEntities);
         }
 
-        public PointsToAbstractValue WithRemovedCopyEntity(AnalysisEntity removedEntity, PointsToAbstractValue defaultValue)
+        public PointsToAbstractValue WithRemovedCopyEntity(AnalysisEntity removedEntity)
         {
             if (Kind == PointsToAbstractValueKind.Unknown)
             {
@@ -156,11 +159,13 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             }
 
             var newCopyEntities = CopyEntities.Remove(removedEntity);
-            return WithCopyEntities(newCopyEntities, defaultValue);
+            return WithCopyEntities(newCopyEntities);
         }
 
-        public PointsToAbstractValue WithCopyEntities(ImmutableHashSet<AnalysisEntity> newCopyEntities, PointsToAbstractValue defaultValue)
+        public PointsToAbstractValue WithCopyEntities(ImmutableHashSet<AnalysisEntity> newCopyEntities)
         {
+            Debug.Assert(Kind != PointsToAbstractValueKind.Unknown);
+
             if (CopyEntities.SetEquals(newCopyEntities))
             {
                 return this;
@@ -168,10 +173,10 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
 
             if (Locations.IsEmpty && newCopyEntities.IsEmpty)
             {
-                return defaultValue;
+                return Unknown;
             }
 
-            return Create(Locations, NullState, newCopyEntities);
+            return Create(Locations, NullState, newCopyEntities, Kind);
         }
 
         public ImmutableHashSet<AbstractLocation> Locations { get; }
