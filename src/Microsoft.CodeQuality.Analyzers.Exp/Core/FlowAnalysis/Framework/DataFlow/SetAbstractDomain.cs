@@ -64,13 +64,17 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow
             {
                 return value1;
             }
-            else if (value1.IsEmpty)
-            {
-                return value2;
-            }
-            else if (value2.IsEmpty || ReferenceEquals(value1, value2))
+            else if (ReferenceEquals(value1, value2))
             {
                 return value1;
+            }
+            else if (value1.IsEmpty)
+            {
+                return merge ? value2 : value1;
+            }
+            else if (value2.IsEmpty)
+            {
+                return merge ? value1 : value2;
             }
 
             var values = merge ? value1.Concat(value2) : value1.Intersect(value2);

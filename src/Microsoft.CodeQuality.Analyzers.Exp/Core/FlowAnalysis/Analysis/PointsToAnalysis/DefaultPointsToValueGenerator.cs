@@ -37,7 +37,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
         }
 
         public void AddTrackedEntities(ImmutableArray<AnalysisEntity>.Builder builder) => builder.AddRange(_defaultPointsToValueMapBuilder.Keys);
-
+        
         public ImmutableDictionary<AnalysisEntity, PointsToAbstractValue> GetDefaultPointsToValueMap()
         {
             _lazyDefaultPointsToValueMap = _lazyDefaultPointsToValueMap ?? _defaultPointsToValueMapBuilder.ToImmutableDictionary();

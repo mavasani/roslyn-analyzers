@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Analyzer.Utilities.Extensions;
 
 namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
 {
@@ -22,7 +23,10 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
 
         public DefaultPointsToValueGenerator DefaultPointsToValueGenerator { get; }
 
-        protected override PointsToAbstractValue GetDefaultValue(AnalysisEntity analysisEntity) => DefaultPointsToValueGenerator.GetOrCreateDefaultValue(analysisEntity);
+        protected override PointsToAbstractValue GetDefaultValue(AnalysisEntity analysisEntity) =>
+            analysisEntity.Type.IsReferenceTypeOrNullableValueType() ?
+            DefaultPointsToValueGenerator.GetOrCreateDefaultValue(analysisEntity) :
+            PointsToAbstractValue.NoLocation;
 
         public PointsToAnalysisData MergeAnalysisDataForBackEdge(PointsToAnalysisData forwardEdgeAnalysisData, PointsToAnalysisData backEdgeAnalysisData, Func<PointsToAbstractValue, IEnumerable<AnalysisEntity>> getChildAnalysisEntities)
         {
@@ -68,6 +72,15 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             var resultMap = Merge(forwardEdgeAnalysisData, backEdgeAnalysisData);
 
             Debug.Assert(Compare(forwardEdgeAnalysisData, resultMap) <= 0);
+            PointsToAnalysis.AssertValidCopyAnalysisData(resultMap);
+
+            return resultMap;
+        }
+
+        protected override PointsToAnalysisData MergeCore(PointsToAnalysisData map1, PointsToAnalysisData map2)
+        {
+            var resultMap = base.MergeCore(map1, map2);
+            PointsToAnalysis.AssertValidCopyAnalysisData(resultMap);
             return resultMap;
         }
     }

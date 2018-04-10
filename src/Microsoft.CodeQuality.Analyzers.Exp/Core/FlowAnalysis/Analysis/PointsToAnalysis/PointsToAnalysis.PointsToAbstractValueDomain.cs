@@ -46,7 +46,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                         Debug.Fail("Compare");
                         return 1;
                     }
-                    else if (locationsCompareResult < 0 || nullCompareResult < 0 || copyCompareResult < 0)
+                    else if (locationsCompareResult < 0 || nullCompareResult < 0 || copyCompareResult != 0)
                     {
                         return -1;
                     }
@@ -58,7 +58,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 else if (oldValue.Kind < newValue.Kind)
                 {
                     Debug.Assert(NullAnalysis.NullAbstractValueDomain.Default.Compare(oldValue.NullState, newValue.NullState) <= 0);
-                    Debug.Assert(_entitiesDomain.Compare(oldValue.CopyEntities, newValue.CopyEntities) > 0);
+                    Debug.Assert(_entitiesDomain.Compare(oldValue.CopyEntities, newValue.CopyEntities) >= 0);
                     return -1;
                 }
                 else
@@ -73,7 +73,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 Debug.Assert(value1 != null);
                 Debug.Assert(value2 != null);
 
-                if (value1 == value2)
+                if (ReferenceEquals(value1, value2))
                 {
                     return value1;
                 }

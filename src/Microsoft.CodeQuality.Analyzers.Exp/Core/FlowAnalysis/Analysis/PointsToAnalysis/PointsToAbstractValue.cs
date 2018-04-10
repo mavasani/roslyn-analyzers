@@ -21,14 +21,16 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
         public static PointsToAbstractValue NoLocation = new PointsToAbstractValue(ImmutableHashSet.Create(AbstractLocation.NoLocation), NullAbstractValue.NotNull, ImmutableHashSet<AnalysisEntity>.Empty);
         public static PointsToAbstractValue NullLocation = new PointsToAbstractValue(ImmutableHashSet.Create(AbstractLocation.Null), NullAbstractValue.Null, ImmutableHashSet<AnalysisEntity>.Empty);
 
-        private PointsToAbstractValue(ImmutableHashSet<AbstractLocation> locations, NullAbstractValue nullState, ImmutableHashSet<AnalysisEntity> copyEntities)
+        private PointsToAbstractValue(ImmutableHashSet<AbstractLocation> locations, NullAbstractValue nullState, ImmutableHashSet<AnalysisEntity> copyEntities, PointsToAbstractValueKind kind = PointsToAbstractValueKind.Known)
         {
             Debug.Assert(!locations.IsEmpty || !copyEntities.IsEmpty);
             Debug.Assert(locations.All(location => !location.IsNull) || nullState != NullAbstractValue.NotNull);
+            Debug.Assert(nullState != NullAbstractValue.NotNull || locations.Any(location => !location.IsNull));
             Debug.Assert(nullState != NullAbstractValue.Undefined);
-            Debug.Assert(nullState != NullAbstractValue.Invalid);
+            Debug.Assert(kind == PointsToAbstractValueKind.Known || kind == PointsToAbstractValueKind.Invalid);
+            Debug.Assert((kind == PointsToAbstractValueKind.Invalid) == (nullState == NullAbstractValue.Invalid));
 
-            Kind = PointsToAbstractValueKind.Known;
+            Kind = kind;
             Locations = locations;
             NullState = nullState;
             CopyEntities = copyEntities;
@@ -38,6 +40,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
         {
             Debug.Assert(kind != PointsToAbstractValueKind.Known);
             Debug.Assert(nullState != NullAbstractValue.Null);
+            Debug.Assert((kind == PointsToAbstractValueKind.Invalid) == (nullState == NullAbstractValue.Invalid));
 
             Kind = kind;
             Locations = ImmutableHashSet<AbstractLocation>.Empty;
@@ -128,13 +131,23 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             return new PointsToAbstractValue(Locations, NullAbstractValue.MaybeNull, CopyEntities);
         }
 
-        public PointsToAbstractValue WithAddedCopyEntity(AnalysisEntity addedEntity)
+        public PointsToAbstractValue MakeInvalid()
         {
-            var newCopyEntities = CopyEntities.Add(addedEntity);
-            return WithCopyEntities(newCopyEntities);
+            if (Kind == PointsToAbstractValueKind.Invalid)
+            {
+                return this;
+            }
+
+            return new PointsToAbstractValue(Locations, NullAbstractValue.Invalid, CopyEntities, kind: PointsToAbstractValueKind.Invalid);
         }
 
-        public PointsToAbstractValue WithRemovedCopyEntity(AnalysisEntity removedEntity)
+        public PointsToAbstractValue WithAddedCopyEntity(AnalysisEntity addedEntity, PointsToAbstractValue defaultValue)
+        {
+            var newCopyEntities = CopyEntities.Add(addedEntity);
+            return WithCopyEntities(newCopyEntities, defaultValue);
+        }
+
+        public PointsToAbstractValue WithRemovedCopyEntity(AnalysisEntity removedEntity, PointsToAbstractValue defaultValue)
         {
             if (Kind == PointsToAbstractValueKind.Unknown)
             {
@@ -143,15 +156,19 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             }
 
             var newCopyEntities = CopyEntities.Remove(removedEntity);
-            return WithCopyEntities(newCopyEntities);
+            return WithCopyEntities(newCopyEntities, defaultValue);
         }
 
-        public PointsToAbstractValue WithCopyEntities(ImmutableHashSet<AnalysisEntity> newCopyEntities)
+        public PointsToAbstractValue WithCopyEntities(ImmutableHashSet<AnalysisEntity> newCopyEntities, PointsToAbstractValue defaultValue)
         {
-            if (CopyEntities.Count == newCopyEntities.Count)
+            if (CopyEntities.SetEquals(newCopyEntities))
             {
-                Debug.Assert(CopyEntities.SetEquals(newCopyEntities));
                 return this;
+            }
+
+            if (Locations.IsEmpty && newCopyEntities.IsEmpty)
+            {
+                return defaultValue;
             }
 
             return Create(Locations, NullState, newCopyEntities);

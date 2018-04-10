@@ -54,10 +54,13 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 if (!value.CopyEntities.IsEmpty)
                 {
                     AssertValidCopyAnalysisEntity(entity);
-                    foreach (var analysisEntity in value.CopyEntities)
+                    foreach (var copyEntity in value.CopyEntities)
                     {
-                        AssertValidCopyAnalysisEntity(analysisEntity);
-                        Debug.Assert(map[analysisEntity].CopyEntities.Contains(entity));
+                        AssertValidCopyAnalysisEntity(copyEntity);
+                        if (map.TryGetValue(copyEntity, out PointsToAbstractValue copyEntityValue))
+                        {
+                            Debug.Assert(copyEntityValue.CopyEntities.Contains(entity));
+                        }
                     }
                 }
             }

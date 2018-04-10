@@ -48,8 +48,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 return base.Flow(statement, block, input);
             }
 
-            private static bool ShouldPointsToLocationsBeTracked(ITypeSymbol typeSymbol)
-                => typeSymbol != null && (typeSymbol.IsReferenceType || typeSymbol.IsNullableValueType());
+            internal static bool ShouldPointsToLocationsBeTracked(ITypeSymbol typeSymbol) => typeSymbol.IsReferenceTypeOrNullableValueType();
 
             protected override void AddTrackedEntities(ImmutableArray<AnalysisEntity>.Builder builder)
             {
@@ -64,6 +63,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 }
                 
             }
+
             protected override bool IsPointsToAnalysis => true;
 
             protected override bool HasAbstractValue(AnalysisEntity analysisEntity) => CurrentAnalysisData.ContainsKey(analysisEntity);
@@ -95,27 +95,92 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
 
             protected override void SetAbstractValue(AnalysisEntity analysisEntity, PointsToAbstractValue value, AnalysisEntity valueEntityOpt = null)
             {
+                AssertValidCopyAnalysisData(CurrentAnalysisData);
+
                 SetAbstractValue(CurrentAnalysisData, analysisEntity, value, valueEntityOpt, _defaultPointsToValueGenerator);
 
                 if (IsCurrentlyPerformingPredicateAnalysis)
                 {
+                    AssertValidCopyAnalysisData(NegatedCurrentAnalysisDataStack.Peek());
                     SetAbstractValue(NegatedCurrentAnalysisDataStack.Peek(), analysisEntity, value, valueEntityOpt, _defaultPointsToValueGenerator);
+                    AssertValidCopyAnalysisData(NegatedCurrentAnalysisDataStack.Peek());
                 }
+
+                AssertValidCopyAnalysisData(CurrentAnalysisData);
+
             }
 
             private static void SetAbstractValue(
                 PointsToAnalysisData analysisData,
                 AnalysisEntity analysisEntity,
-                PointsToAbstractValue newValue,
+                PointsToAbstractValue assignedValue,
                 AnalysisEntity valueEntityOpt,
                 DefaultPointsToValueGenerator defaultPointsToValueGenerator,
                 bool fromCopyPredicateAnalysis = false)
             {
                 var currentValue = GetAbstractValue(analysisData, analysisEntity, defaultPointsToValueGenerator);
-                if (SetAbstractValueCore(analysisData, analysisEntity, newValue, currentValue))
+                Debug.Assert(!currentValue.CopyEntities.Contains(analysisEntity));
+
+                assignedValue = FixupCopyEntities(assignedValue, analysisEntity, currentValue, valueEntityOpt, defaultPointsToValueGenerator, fromCopyPredicateAnalysis);
+                SetAbstractValueCore(analysisData, analysisEntity, assignedValue, currentValue);
+
+                // If not setting the value from copy predicate analysis, remove analysisEntity from the CopyEntities set for currentValue.
+                if (!fromCopyPredicateAnalysis)
                 {
-                    UpdateCopyEntities(analysisData, analysisEntity, newValue, currentValue, valueEntityOpt, defaultPointsToValueGenerator, fromCopyPredicateAnalysis);
+                    SetAbstractValueForCopyEntities(currentValue.CopyEntities, add: false);
                 }
+
+                // Add analysisEntity to the the CopyEntities set for assignedValue.
+                SetAbstractValueForCopyEntities(assignedValue.CopyEntities, add: true);
+
+                void SetAbstractValueForCopyEntities(IEnumerable<AnalysisEntity> copyEntitiesToUpdate, bool add)
+                {
+                    foreach (var copyEntity in copyEntitiesToUpdate)
+                    {
+                        Debug.Assert(copyEntity != analysisEntity);
+                        var oldCopyEntityValue = GetAbstractValue(analysisData, copyEntity, defaultPointsToValueGenerator);
+                        var defaultEntityValue = ShouldPointsToLocationsBeTracked(copyEntity.Type) ? PointsToAbstractValue.Unknown : PointsToAbstractValue.NoLocation;
+                        var newCopyEntityValue = add ? oldCopyEntityValue.WithAddedCopyEntity(analysisEntity, defaultEntityValue) : oldCopyEntityValue.WithRemovedCopyEntity(analysisEntity, defaultEntityValue);
+                        SetAbstractValueCore(analysisData, copyEntity, newCopyEntityValue, oldCopyEntityValue);
+                    }
+                };
+            }
+
+            private static PointsToAbstractValue FixupCopyEntities(
+                PointsToAbstractValue assignedValue,
+                AnalysisEntity analysisEntity,
+                PointsToAbstractValue currentValue,
+                AnalysisEntity valueEntityOpt,
+                DefaultPointsToValueGenerator defaultPointsToValueGenerator,
+                bool fromCopyPredicateAnalysis = false)
+            {
+                ImmutableHashSet<AnalysisEntity> assignedValueCopyEntities;
+
+                // Don't track entities if do not know about it's instance location.
+                if (analysisEntity.HasUnknownInstanceLocation)
+                {
+                    assignedValueCopyEntities = ImmutableHashSet<AnalysisEntity>.Empty;
+                }
+                else
+                {
+                    assignedValueCopyEntities = assignedValue.CopyEntities;
+                    if (valueEntityOpt != null && !valueEntityOpt.HasUnknownInstanceLocation)
+                    {
+                        assignedValueCopyEntities = assignedValueCopyEntities.Add(valueEntityOpt);
+                    }
+
+                    assignedValueCopyEntities = assignedValueCopyEntities.Remove(analysisEntity);
+                    Debug.Assert(assignedValueCopyEntities.All(entity => !entity.HasUnknownInstanceLocation));
+
+                    // If setting value from copy predicate analysis, also include the existing values for the analysis entity.
+                    if (fromCopyPredicateAnalysis)
+                    {
+                        assignedValueCopyEntities = assignedValueCopyEntities.Union(currentValue.CopyEntities);
+                    }
+                }
+
+                var defaultValue = ShouldPointsToLocationsBeTracked(analysisEntity.Type) ? PointsToAbstractValue.Unknown : PointsToAbstractValue.NoLocation;
+                return assignedValue.WithCopyEntities(assignedValueCopyEntities, defaultValue);
             }
 
             private static bool SetAbstractValueCore(
@@ -124,6 +189,9 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 PointsToAbstractValue newValue,
                 PointsToAbstractValue currentValue)
             {
+                Debug.Assert(!currentValue.CopyEntities.Contains(analysisEntity));
+                Debug.Assert(!newValue.CopyEntities.Contains(analysisEntity));
+
                 if (currentValue != newValue)
                 {
                     analysisData[analysisEntity] = newValue;
@@ -136,7 +204,8 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
             private static void SetAbstractValueFromPredicate(PointsToAnalysisData analysisData, AnalysisEntity analysisEntity, IOperation operation, NullAbstractValue nullState)
             {
                 Debug.Assert(IsValidValueForPredicateAnalysis(nullState) || nullState == NullAbstractValue.Invalid);
-                if (analysisData.TryGetValue(analysisEntity, out PointsToAbstractValue existingValue))
+                if (analysisData.TryGetValue(analysisEntity, out PointsToAbstractValue existingValue) &&
+                    existingValue.Kind != PointsToAbstractValueKind.Invalid)
                 {
                     PointsToAbstractValue newPointsToValue;
                     switch (nullState)
@@ -150,7 +219,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                             break;
 
                         case NullAbstractValue.Invalid:
-                            newPointsToValue = PointsToAbstractValue.Invalid;
+                            newPointsToValue = existingValue.MakeInvalid();
                             break;
 
                         default:
@@ -159,91 +228,6 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
 
                     analysisData[analysisEntity] = newPointsToValue;
                 }
-            }
-
-            private static void UpdateCopyEntities(
-                PointsToAnalysisData analysisData,
-                AnalysisEntity analysisEntity,
-                PointsToAbstractValue assignedValue,
-                PointsToAbstractValue currentValue,
-                AnalysisEntity valueEntityOpt,
-                DefaultPointsToValueGenerator defaultPointsToValueGenerator,
-                bool fromCopyPredicateAnalysis)
-            {
-                AssertValidCopyAnalysisData(analysisData);
-
-                // Don't track entities if do not know about it's instance location.
-                if (analysisEntity.HasUnknownInstanceLocation)
-                {
-                    return;
-                }
-
-                ImmutableHashSet<AnalysisEntity> copyEntities = assignedValue.CopyEntities;
-                if (valueEntityOpt != null)
-                {
-                    copyEntities = copyEntities.Add(valueEntityOpt);
-                }
-
-                if (copyEntities.Count > 0)
-                {
-                    if (analysisData.TryGetValue(copyEntities.First(), out var fixedUpValue))
-                    {
-                        copyEntities = fixedUpValue.CopyEntities;
-                    }
-
-                    var validEntities = copyEntities.Where(entity => !entity.HasUnknownInstanceLocation).ToImmutableHashSet();
-                    if (validEntities.Count < copyEntities.Count)
-                    {
-                        copyEntities = validEntities.Count > 0 ? validEntities : ImmutableHashSet<AnalysisEntity>.Empty;
-                    }
-                }
-
-                // Handle updating the existing value if not setting the value from predicate analysis.
-                if (!fromCopyPredicateAnalysis)
-                {
-                    if (currentValue.CopyEntities.SetEquals(copyEntities))
-                    {
-                        // Assigning the same value to the entity.
-                        return;
-                    }
-
-                    SetAbstractValueForCopyEntity(currentValue.CopyEntities, add: false);
-                }
-
-                // Handle setting the new value.
-                if (fromCopyPredicateAnalysis)
-                {
-                    // Also include the existing values for the analysis entity.
-                    copyEntities = copyEntities.Union(currentValue.CopyEntities);
-                }
-
-                SetAbstractValueForCopyEntity(copyEntities, add: true);
-
-                var newCopyEntities = copyEntities.Contains(analysisEntity) ?
-                    copyEntities.Remove(analysisEntity) :
-                    copyEntities;
-                assignedValue = currentValue.WithCopyEntities(newCopyEntities);
-                if (currentValue != assignedValue)
-                {
-                    analysisData[analysisEntity] = assignedValue;
-                }
-
-                AssertValidCopyAnalysisData(analysisData);
-
-                void SetAbstractValueForCopyEntity(IEnumerable<AnalysisEntity> entitiesToUpdate, bool add)
-                {
-                    foreach (var entityToUpdate in currentValue.CopyEntities)
-                    {
-                        if (entityToUpdate == analysisEntity)
-                        {
-                            continue;
-                        }
-
-                        var oldCopyEntityValue = GetAbstractValue(analysisData, entityToUpdate, defaultPointsToValueGenerator);
-                        var newCopyEntityValue = add ? oldCopyEntityValue.WithAddedCopyEntity(analysisEntity) : oldCopyEntityValue.WithRemovedCopyEntity(analysisEntity);
-                        SetAbstractValueCore(analysisData, entityToUpdate, newCopyEntityValue, oldCopyEntityValue);
-                    }
-                };
             }
 
             protected override void SetValueForParameterOnEntry(IParameterSymbol parameter, AnalysisEntity analysisEntity)
@@ -307,9 +291,16 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                 bool equals,
                 bool isReferenceEquality)
             {
+                AssertValidCopyAnalysisData(CurrentAnalysisData);
+                AssertValidCopyAnalysisData(negatedCurrentAnalysisData);
+
                 var predicateValueKind = PredicateValueKind.Unknown;
                 SetCopyValueForEqualsOrNotEqualsComparisonOperator(leftOperand, rightOperand, negatedCurrentAnalysisData, equals, isReferenceEquality, ref predicateValueKind);
                 SetNullValueForEqualsOrNotEqualsComparisonOperator(leftOperand, rightOperand, negatedCurrentAnalysisData, equals, ref predicateValueKind);
+
+                AssertValidCopyAnalysisData(CurrentAnalysisData);
+                AssertValidCopyAnalysisData(negatedCurrentAnalysisData);
+
                 return predicateValueKind;
             }
 
@@ -360,10 +351,16 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.PointsToAnalysis
                             // CurrentAnalysisData and negatedCurrentAnalysisData are both unknown values.
                             foreach (var entity in rightValue.CopyEntities.Concat(leftEntity).Concat(rightEntity))
                             {
-                                SetAbstractValue(CurrentAnalysisData, entity, PointsToAbstractValue.Invalid,
-                                    valueEntityOpt: null, defaultPointsToValueGenerator: _defaultPointsToValueGenerator, fromCopyPredicateAnalysis: true);
-                                SetAbstractValue(negatedCurrentAnalysisData, entity, PointsToAbstractValue.Invalid,
-                                    valueEntityOpt: null, defaultPointsToValueGenerator: _defaultPointsToValueGenerator, fromCopyPredicateAnalysis: true);
+                                var newValue = GetAbstractValue(CurrentAnalysisData, entity, _defaultPointsToValueGenerator).MakeInvalid();
+                                MakeInvalidForAnalysisData(CurrentAnalysisData);
+                                MakeInvalidForAnalysisData(negatedCurrentAnalysisData);
+
+                                void MakeInvalidForAnalysisData(PointsToAnalysisData analysisData)
+                                {
+                                    SetAbstractValue(analysisData, entity, newValue,
+                                        valueEntityOpt: null, defaultPointsToValueGenerator: _defaultPointsToValueGenerator,
+                                        fromCopyPredicateAnalysis: true);
+                                };
                             }
                         }
                     }
