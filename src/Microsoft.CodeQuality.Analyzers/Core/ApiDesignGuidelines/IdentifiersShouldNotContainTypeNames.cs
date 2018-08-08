@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using Analyzer.Utilities;
 using Analyzer.Utilities.Extensions;
 using Microsoft.CodeAnalysis;
@@ -13,7 +13,9 @@ namespace Microsoft.CodeQuality.Analyzers.ApiDesignGuidelines
     /// <summary> 
     /// CA1720-redefined: Identifiers should not contain type names 
     /// Cause: 
-    /// The name of a parameter or a member contains a language-specific data type name. 
+    /// The name of a parameter in an externally visible member contains a data type name.
+    /// -or-
+    /// The name of an externally visible member contains a language-specific data type name.
     ///  
     /// Description: 
     /// Names of parameters and members are better used to communicate their meaning than  
@@ -29,11 +31,9 @@ namespace Microsoft.CodeQuality.Analyzers.ApiDesignGuidelines
         private static readonly LocalizableString s_localizableMessage = new LocalizableResourceString(nameof(MicrosoftApiDesignGuidelinesAnalyzersResources.IdentifiersShouldNotContainTypeNamesMessage), MicrosoftApiDesignGuidelinesAnalyzersResources.ResourceManager, typeof(MicrosoftApiDesignGuidelinesAnalyzersResources));
         private static readonly LocalizableString s_localizableDescription = new LocalizableResourceString(nameof(MicrosoftApiDesignGuidelinesAnalyzersResources.IdentifiersShouldNotContainTypeNamesDescription), MicrosoftApiDesignGuidelinesAnalyzersResources.ResourceManager, typeof(MicrosoftApiDesignGuidelinesAnalyzersResources));
 
-        private static readonly ImmutableHashSet<string> s_typeNames =
+        private static readonly ImmutableHashSet<string> s_IntgeralTypeNames =
             ImmutableHashSet.CreateRange(StringComparer.OrdinalIgnoreCase, new[]
             {
-                "char",
-                "wchar",
                 "int8",
                 "uint8",
                 "short",
@@ -45,29 +45,56 @@ namespace Microsoft.CodeQuality.Analyzers.ApiDesignGuidelines
                 "long",
                 "ulong",
                 "unsigned",
-                "signed",
+                "signed"
+            });
+
+        private static readonly ImmutableHashSet<string> s_languageSpecificTypeNames =
+            ImmutableDictionary.CreateRange<SpecialType, ImmutableHashSet<string>>(StringComparer.OrdinalIgnoreCase, new[]
+            {
+                new KeyValuePair<SpecialType, ImmutableHashSet<string>>(SpecialType.System_Char, ImmutableHashSet.Create("char", "wchar")),
+                new KeyValuePair<SpecialType, ImmutableHashSet<string>>(SpecialType.System_Char, ImmutableHashSet.Create("char", "wchar")),
+
                 "float",
                 "float32",
-                "float64",
+                "float64"
+            });
+
+        private static readonly ImmutableHashSet<string> s_languageIndependentTypeNames =
+            ImmutableHashSet.CreateRange(StringComparer.OrdinalIgnoreCase, new[]
+            {
+                "object",
+                "obj",
+                "boolean",
+                "char",
+                "string",
+                "sbyte",
+                "byte",
+                "ubyte",
                 "int16",
-                "int32",
-                "int64",
                 "uint16",
+                "int32",
                 "uint32",
+                "int64",
                 "uint64",
                 "intptr",
-                "uintptr",
                 "ptr",
-                "uptr",
                 "pointer",
+                "uintptr",
+                "uptr",
                 "upointer",
                 "single",
                 "double",
                 "decimal",
-                "guid",
-                "object",
-                "obj",
-                "string"
+                "guid"
+            });
+
+        // FxCop compat
+        private static readonly ImmutableHashSet<string> s_ignorableTypeNames =
+            ImmutableHashSet.CreateRange(StringComparer.OrdinalIgnoreCase, new[]
+            {
+                "ConnectionString",
+                "QueryString",
+                "CharSet"
             });
 
         internal static DiagnosticDescriptor Rule = new DiagnosticDescriptor(RuleId,
@@ -123,14 +150,56 @@ namespace Microsoft.CodeQuality.Analyzers.ApiDesignGuidelines
 
         private static void AnalyzeSymbol(ISymbol symbol, SymbolAnalysisContext context)
         {
-            // FxCop compat: only analyze externally visible symbols.
+            // FxCop compat: only analyze externally visible symbols which have a special type.
             if (!symbol.IsExternallyVisible())
             {
                 return;
             }
 
+            var type = symbol.GetMemerOrLocalOrParameterType();
+            if (type == null || type.SpecialType == SpecialType.n)
+
             var identifier = symbol.Name;
-            if (s_typeNames.Contains(identifier))
+            var words = WordParser.Parse(symbol, WordParserOptions.SplitCompoundWords).ToImmutableArray();
+
+            // We need to make sure that we look at three token compound words.
+            // such as 'UIntPtr', before we look at two token compound words, such 
+            // as 'IntPtr' and one token words, such as 'Ptr'. This is so that we 
+            // only fire once on each word, whether it is combined with another word
+            // or not.
+            int wordsCount = words.Length;
+            for (int i = 0; i < wordsCount; i++)
+            {
+                string nextNextWord = i + 2 < wordsCount ? words[i + 2] : null;
+                string nextWord = i + 1 < wordsCount ? words[i + 1] : null;
+                string word = words[i];
+
+                if (nextNextWord != null)
+                {
+                    if (CheckForTypeName(target, type, word + nextWord + nextNextWord))
+                    {
+                        // Skip over the next two words so we
+                        // do not fire twice on the same word
+                        i += 2;
+                        continue;
+                    }
+                }
+
+                if (nextWord != null)
+                {
+                    if (CheckForTypeName(target, type, word + nextWord))
+                    {
+                        // Skip over the next word so we do 
+                        // not fire twice on the same word
+                        i += 1;
+                        continue;
+                    }
+                }
+
+                CheckForTypeName(target, type, word);
+            }
+
+            if (s_languageIndependentTypeNames.Contains(identifier))
             {
                 Diagnostic diagnostic = Diagnostic.Create(Rule, symbol.Locations[0], identifier);
                 context.ReportDiagnostic(diagnostic);

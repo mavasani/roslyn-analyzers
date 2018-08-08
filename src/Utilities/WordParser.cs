@@ -3,6 +3,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Text;
+using Microsoft.CodeAnalysis;
 
 namespace Analyzer.Utilities
 {
@@ -106,6 +107,48 @@ namespace Analyzer.Utilities
             _prefix = prefix;
         }
 
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="WordParser"/> class with the specified text, options and prefix.
+        /// </summary>
+        /// <param name="symbol">
+        ///     Symbol whose name is to be parsed.
+        /// </param>
+        /// <param name="options">
+        ///     One or more of the <see cref="WordParserOptions"/> specifying parsing and delimiting options.
+        /// </param>
+        /// <exception cref="ArgumentNullException">
+        ///     <paramref name="text"/> is <see langword="null"/>.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        ///     <paramref name="options"/> is not one or more of the <see cref="WordParserOptions"/> values.
+        /// </exception>
+        public WordParser(ISymbol symbol, WordParserOptions options)
+            : this(symbol?.Name, options, GetPrefix(symbol))
+        {
+            if (symbol == null)
+            {
+                throw new ArgumentNullException(nameof(symbol));
+            }
+        }
+
+        private static char GetPrefix(ISymbol symbol)
+        {
+            switch (symbol?.Kind)
+            {
+                case SymbolKind.TypeParameter:
+                    return 'T';
+
+                case SymbolKind.NamedType:
+                    if (((INamedTypeSymbol)symbol).TypeKind == TypeKind.Interface)
+                    {
+                        return 'I';
+                    }
+                    break;
+            }
+
+            return NullChar;
+        }
+
         private bool SkipMnemonics =>
             (_options & WordParserOptions.IgnoreMnemonicsIndicators) == WordParserOptions.IgnoreMnemonicsIndicators;
 
@@ -133,6 +176,34 @@ namespace Analyzer.Utilities
         internal static Collection<string> Parse(string text, WordParserOptions options)
         {
             return Parse(text, options, NullChar);
+        }
+
+        /// <summary>
+        ///     Returns the words contained in the specified text, delimiting based on the specified options.
+        /// </summary>
+        /// <param name="symbol">
+        ///     Symbol whose name is to be parsed.
+        /// </param>
+        /// <param name="options">
+        ///     One or more of the <see cref="WordParserOptions"/> specifying parsing and delimiting options.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Collection{T}"/> of strings containing the words contained in <paramref name="text"/>.
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        ///     <paramref name="symbol"/> is <see langword="null"/>.
+        /// </exception>
+        /// <exception cref="ArgumentException">
+        ///     <paramref name="options"/> is not one or more of the <see cref="WordParserOptions"/> values.
+        /// </exception>
+        internal static Collection<string> Parse(ISymbol symbol, WordParserOptions options)
+        {
+            if (symbol == null)
+            {
+                throw new ArgumentNullException(nameof(symbol));
+            }
+
+            return Parse(symbol.Name, options, GetPrefix(symbol));
         }
 
         /// <summary>
