@@ -2,7 +2,7 @@
 
 using System.Collections.Generic;
 
-namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.StringContentAnalysis
+namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 {
     using CoreStringContentAnalysisData = IDictionary<AnalysisEntity, StringContentAbstractValue>;
 

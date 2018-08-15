@@ -6,7 +6,7 @@ using System.Diagnostics;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.CopyAnalysis;
 using Microsoft.CodeAnalysis.Operations;
 
-namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.StringContentAnalysis
+namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 {
     internal partial class StringContentAnalysis : ForwardDataFlowAnalysis<StringContentAnalysisData, StringContentBlockAnalysisResult, StringContentAbstractValue>
     {
@@ -89,7 +89,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.StringContentAnalysis
                         existingValue.IsLiteralState)
                     {
                         var newStringContentValue = stringContentValue.IntersectLiteralValues(existingValue);
-                        if (newStringContentValue.NonLiteralState == StringContainsNonLiteralState.Invalid)
+                        if (newStringContentValue.NonLiteralState == ValueContainsNonLiteralState.Invalid)
                         {
                             predicateValueKind = equals ? PredicateValueKind.AlwaysFalse : PredicateValueKind.AlwaysTrue;
                         }

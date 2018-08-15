@@ -7,24 +7,24 @@ using System.Globalization;
 using System.Linq;
 using Analyzer.Utilities;
 
-namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.StringContentAnalysis
+namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 {
     /// <summary>
     /// Abstract string content data value for <see cref="AnalysisEntity"/>/<see cref="IOperation"/> tracked by <see cref="StringContentAnalysis"/>.
     /// </summary>
-    internal partial class StringContentAbstractValue : CacheBasedEquatable<StringContentAbstractValue>
+    internal partial class StringContentAbstractValue : AbstractValue<StringContentAbstractValue>
     {
-        public static readonly StringContentAbstractValue UndefinedState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, StringContainsNonLiteralState.Undefined);
-        public static readonly StringContentAbstractValue InvalidState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, StringContainsNonLiteralState.Invalid);
-        public static readonly StringContentAbstractValue MayBeContainsNonLiteralState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, StringContainsNonLiteralState.Maybe);
-        public static readonly StringContentAbstractValue DoesNotContainLiteralOrNonLiteralState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, StringContainsNonLiteralState.No);
-        private static readonly StringContentAbstractValue ContainsEmpyStringLiteralState = new StringContentAbstractValue(ImmutableHashSet.Create(string.Empty), StringContainsNonLiteralState.No);
+        public static readonly StringContentAbstractValue UndefinedState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, ValueContainsNonLiteralState.Undefined);
+        public static readonly StringContentAbstractValue InvalidState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, ValueContainsNonLiteralState.Invalid);
+        public static readonly StringContentAbstractValue MayBeContainsNonLiteralState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, ValueContainsNonLiteralState.Maybe);
+        public static readonly StringContentAbstractValue DoesNotContainLiteralOrNonLiteralState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, ValueContainsNonLiteralState.No);
+        private static readonly StringContentAbstractValue ContainsEmpyStringLiteralState = new StringContentAbstractValue(ImmutableHashSet.Create(string.Empty), ValueContainsNonLiteralState.No);
 
         public static StringContentAbstractValue Create(string literal)
         {
             if (literal.Length > 0)
             {
-                return new StringContentAbstractValue(ImmutableHashSet.Create(literal), StringContainsNonLiteralState.No);
+                return new StringContentAbstractValue(ImmutableHashSet.Create(literal), ValueContainsNonLiteralState.No);
             }
             else
             {
@@ -32,23 +32,23 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.StringContentAnalysis
             }
         }
 
-        private StringContentAbstractValue(ImmutableHashSet<string> literalValues, StringContainsNonLiteralState nonLiteralState)
+        private StringContentAbstractValue(ImmutableHashSet<string> literalValues, ValueContainsNonLiteralState nonLiteralState)
         {
             LiteralValues = literalValues;
             NonLiteralState = nonLiteralState;
         }
 
-        private static StringContentAbstractValue Create(ImmutableHashSet<string> literalValues, StringContainsNonLiteralState nonLiteralState)
+        private static StringContentAbstractValue Create(ImmutableHashSet<string> literalValues, ValueContainsNonLiteralState nonLiteralState)
         {
             if (literalValues.IsEmpty)
             {
                 switch (nonLiteralState)
                 {
-                    case StringContainsNonLiteralState.Undefined:
+                    case ValueContainsNonLiteralState.Undefined:
                         return UndefinedState;
-                    case StringContainsNonLiteralState.Invalid:
+                    case ValueContainsNonLiteralState.Invalid:
                         return InvalidState;
-                    case StringContainsNonLiteralState.No:
+                    case ValueContainsNonLiteralState.No:
                         return DoesNotContainLiteralOrNonLiteralState;
                     default:
                         return MayBeContainsNonLiteralState;
@@ -61,7 +61,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.StringContentAnalysis
         /// <summary>
         /// Indicates if this string variable contains non literal string operands or not.
         /// </summary>
-        public StringContainsNonLiteralState NonLiteralState { get; }
+        public ValueContainsNonLiteralState NonLiteralState { get; }
 
         /// <summary>
         /// Gets a collection of the string literals that could possibly make up the contents of this string <see cref="Operand"/>.
@@ -91,36 +91,36 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.StringContentAnalysis
             }
 
             ImmutableHashSet<string> mergedLiteralValues = LiteralValues.Union(otherState.LiteralValues);
-            StringContainsNonLiteralState mergedNonLiteralState = Merge(NonLiteralState, otherState.NonLiteralState);
+            ValueContainsNonLiteralState mergedNonLiteralState = Merge(NonLiteralState, otherState.NonLiteralState);
             return Create(mergedLiteralValues, mergedNonLiteralState);
         }
 
-        private static StringContainsNonLiteralState Merge(StringContainsNonLiteralState value1, StringContainsNonLiteralState value2)
+        private static ValueContainsNonLiteralState Merge(ValueContainsNonLiteralState value1, ValueContainsNonLiteralState value2)
         {
             // + U I M N
             // U U U M N
             // I U I M N
             // M M M M M
             // N N N M N
-            if (value1 == StringContainsNonLiteralState.Maybe || value2 == StringContainsNonLiteralState.Maybe)
+            if (value1 == ValueContainsNonLiteralState.Maybe || value2 == ValueContainsNonLiteralState.Maybe)
             {
-                return StringContainsNonLiteralState.Maybe;
+                return ValueContainsNonLiteralState.Maybe;
             }
-            else if (value1 == StringContainsNonLiteralState.Invalid || value1 == StringContainsNonLiteralState.Undefined)
+            else if (value1 == ValueContainsNonLiteralState.Invalid || value1 == ValueContainsNonLiteralState.Undefined)
             {
                 return value2;
             }
-            else if (value2 == StringContainsNonLiteralState.Invalid || value2 == StringContainsNonLiteralState.Undefined)
+            else if (value2 == ValueContainsNonLiteralState.Invalid || value2 == ValueContainsNonLiteralState.Undefined)
             {
                 return value1;
             }
 
-            Debug.Assert(value1 == StringContainsNonLiteralState.No);
-            Debug.Assert(value2 == StringContainsNonLiteralState.No);
-            return StringContainsNonLiteralState.No;
+            Debug.Assert(value1 == ValueContainsNonLiteralState.No);
+            Debug.Assert(value2 == ValueContainsNonLiteralState.No);
+            return ValueContainsNonLiteralState.No;
         }
 
-        public bool IsLiteralState => !LiteralValues.IsEmpty && NonLiteralState == StringContainsNonLiteralState.No;
+        public bool IsLiteralState => !LiteralValues.IsEmpty && NonLiteralState == ValueContainsNonLiteralState.No;
 
         public StringContentAbstractValue IntersectLiteralValues(StringContentAbstractValue value2)
         {
@@ -129,7 +129,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.StringContentAnalysis
 
             // Merge Literals
             var mergedLiteralValues = this.LiteralValues.Intersect(value2.LiteralValues);
-            return mergedLiteralValues.IsEmpty ? InvalidState : new StringContentAbstractValue(mergedLiteralValues, StringContainsNonLiteralState.No);
+            return mergedLiteralValues.IsEmpty ? InvalidState : new StringContentAbstractValue(mergedLiteralValues, ValueContainsNonLiteralState.No);
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.StringContentAnalysis
             }
 
             ImmutableHashSet<string> mergedLiteralValues = builder.ToImmutable();
-            StringContainsNonLiteralState mergedNonLiteralState = Merge(NonLiteralState, otherState.NonLiteralState);
+            ValueContainsNonLiteralState mergedNonLiteralState = Merge(NonLiteralState, otherState.NonLiteralState);
 
             return new StringContentAbstractValue(mergedLiteralValues, mergedNonLiteralState);
         }
