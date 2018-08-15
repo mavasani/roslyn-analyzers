@@ -4,21 +4,21 @@ using System.Collections.Generic;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 {
-    using StringContentAnalysisDomain = PredicatedAnalysisDataDomain<StringContentAnalysisData, StringContentAbstractValue>;
+    using ValueContentAnalysisDomain = PredicatedAnalysisDataDomain<ValueContentAnalysisData, IAbstractValue>;
 
     /// <summary>
     /// Dataflow analysis to track string content of <see cref="AnalysisEntity"/>/<see cref="IOperation"/>.
     /// </summary>
-    internal partial class StringContentAnalysis : ForwardDataFlowAnalysis<StringContentAnalysisData, StringContentBlockAnalysisResult, StringContentAbstractValue>
+    internal partial class ValueContentAnalysis : ForwardDataFlowAnalysis<ValueContentAnalysisData, ValueContentBlockAnalysisResult, IAbstractValue>
     {
-        private static readonly StringContentAnalysisDomain s_AnalysisDomain = new StringContentAnalysisDomain(CoreAnalysisDataDomain.Instance);
+        private static readonly ValueContentAnalysisDomain s_AnalysisDomain = new ValueContentAnalysisDomain(CoreAnalysisDataDomain.Instance);
 
-        private StringContentAnalysis(StringContentDataFlowOperationVisitor operationVisitor)
+        private ValueContentAnalysis(StringContentDataFlowOperationVisitor operationVisitor)
             : base(s_AnalysisDomain, operationVisitor)
         {
         }
 
-        public static DataFlowAnalysisResult<StringContentBlockAnalysisResult, StringContentAbstractValue> GetOrComputeResult(
+        public static DataFlowAnalysisResult<ValueContentBlockAnalysisResult, IAbstractValue> GetOrComputeResult(
             ControlFlowGraph cfg,
             ISymbol owningSymbol,
             WellKnownTypeProvider wellKnownTypeProvider,
@@ -26,12 +26,12 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
             DataFlowAnalysisResult<PointsToAnalysis.PointsToBlockAnalysisResult, PointsToAnalysis.PointsToAbstractValue> pointsToAnalysisResultOpt = null,
             bool pessimisticAnalsysis = true)
         {
-            var operationVisitor = new StringContentDataFlowOperationVisitor(StringContentAbstractValueDomain.Default, owningSymbol,
+            var operationVisitor = new StringContentDataFlowOperationVisitor(IAbstractValueDomain.Default, owningSymbol,
                 wellKnownTypeProvider, cfg, pessimisticAnalsysis, copyAnalysisResultOpt, pointsToAnalysisResultOpt);
-            var nullAnalysis = new StringContentAnalysis(operationVisitor);
+            var nullAnalysis = new ValueContentAnalysis(operationVisitor);
             return nullAnalysis.GetOrComputeResultCore(cfg, cacheResult: false);
         }
 
-        internal override StringContentBlockAnalysisResult ToResult(BasicBlock basicBlock, DataFlowAnalysisInfo<StringContentAnalysisData> blockAnalysisData) => new StringContentBlockAnalysisResult(basicBlock, blockAnalysisData);
+        internal override ValueContentBlockAnalysisResult ToResult(BasicBlock basicBlock, DataFlowAnalysisInfo<ValueContentAnalysisData> blockAnalysisData) => new ValueContentBlockAnalysisResult(basicBlock, blockAnalysisData);
     }
 }

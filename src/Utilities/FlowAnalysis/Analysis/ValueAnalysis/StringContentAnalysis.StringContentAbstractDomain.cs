@@ -5,20 +5,20 @@ using System.Diagnostics;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 {
-    internal partial class StringContentAnalysis : ForwardDataFlowAnalysis<StringContentAnalysisData, StringContentBlockAnalysisResult, StringContentAbstractValue>
+    internal partial class ValueContentAnalysis : ForwardDataFlowAnalysis<ValueContentAnalysisData, ValueContentBlockAnalysisResult, StringContentAbstractValue>
     {
         /// <summary>
-        /// Abstract value domain for <see cref="StringContentAnalysis"/> to merge and compare <see cref="StringContentAbstractValue"/> values.
+        /// Abstract value domain for <see cref="ValueContentAnalysis"/> to merge and compare <see cref="IAbstractValue"/> values.
         /// </summary>
-        private sealed class StringContentAbstractValueDomain : AbstractValueDomain<StringContentAbstractValue>
+        private sealed class ValueContentAbstractValueDomain : AbstractValueDomain<IAbstractValue>
         {
-            public static StringContentAbstractValueDomain Default = new StringContentAbstractValueDomain();
+            public static ValueContentAbstractValueDomain Default = new ValueContentAbstractValueDomain();
 
-            private StringContentAbstractValueDomain() { }
+            private ValueContentAbstractValueDomain() { }
 
-            public override StringContentAbstractValue Bottom => StringContentAbstractValue.UndefinedState;
+            public override IAbstractValue Bottom => StringContentAbstractValue.UndefinedState;
 
-            public override StringContentAbstractValue UnknownOrMayBeValue => StringContentAbstractValue.MayBeContainsNonLiteralState;
+            public override IAbstractValue UnknownOrMayBeValue => StringContentAbstractValue.MayBeContainsNonLiteralState;
 
             public override int Compare(StringContentAbstractValue oldValue, StringContentAbstractValue newValue)
             {

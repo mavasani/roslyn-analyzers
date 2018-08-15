@@ -6,28 +6,24 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Analyzer.Utilities;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 {
     /// <summary>
-    /// Abstract string content data value for <see cref="AnalysisEntity"/>/<see cref="IOperation"/> tracked by <see cref="StringContentAnalysis"/>.
+    /// Abstract primitive typed data value for <see cref="AnalysisEntity"/>/<see cref="IOperation"/> tracked by <see cref="ValueContentAnalysis"/>.
     /// </summary>
-    internal abstract partial class AbstractPrimitiveValue<TValue, TPrimitiveType>: AbstractValue<TValue>
+    internal abstract partial class AbstractPrimitiveValue<TValue, TPrimitiveType>: CacheBasedEquatable<TValue>, IAbstractValue
+        where TValue: class
         where TPrimitiveType : IEquatable<TPrimitiveType>
     {
-        public abstract TValue UndefinedState { get; }
-        public abstract TValue InvalidState { get; }
-        public abstract TValue MayBeContainsNonLiteralState { get; }
-        public abstract TValue DoesNotContainLiteralOrNonLiteralState { get; }
-        //private static readonly TValue ContainsEmpyStringLiteralState { get; }
-
-        protected abstract AbstractPrimitiveValue<TValue, TPrimitiveType> Create(ImmutableHashSet<TPrimitiveType> literalValues, ValueContainsNonLiteralState nonLiteralState);
-
         protected AbstractPrimitiveValue(ImmutableHashSet<TPrimitiveType> literalValues, ValueContainsNonLiteralState nonLiteralState)
         {
             LiteralValues = literalValues;
             NonLiteralState = nonLiteralState;
         }
+
+        protected abstract AbstractPrimitiveValue<TValue, TPrimitiveType> MayBeContainsNonLiteralPrimitiveState { get; }
 
         /// <summary>
         /// Indicates if this variable contains non-literal operands or not.
@@ -39,7 +35,9 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
         /// </summary>
         public ImmutableHashSet<TPrimitiveType> LiteralValues { get; }
 
-        protected override int ComputeHashCode()
+        protected abstract AbstractPrimitiveValue<TValue, TPrimitiveType> CreateMergedOrIntersectedValue(ImmutableHashSet<TPrimitiveType> literalValues, ValueContainsNonLiteralState nonLiteralState);
+
+        protected sealed override int ComputeHashCode()
         {
             var hashCode = HashUtilities.Combine(NonLiteralState.GetHashCode(), LiteralValues.Count.GetHashCode());
             foreach (var literal in LiteralValues.OrderBy(s => s))
@@ -54,18 +52,16 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
         /// Performs the union of this state and the other state 
         /// and returns a new <see cref="TValue"/> with the result.
         /// </summary>
-        public override AbstractValue<TValue> Merge(AbstractValue<TValue> otherState)
+        public AbstractPrimitiveValue<TValue, TPrimitiveType> Merge(AbstractPrimitiveValue<TValue, TPrimitiveType> otherState)
         {
             if (otherState == null)
             {
-                throw new ArgumentNullException(nameof(otherState));
+                return MayBeContainsNonLiteralPrimitiveState;
             }
-
-            var otherPrimitiveState = (AbstractPrimitiveValue<TValue, TPrimitiveType>)otherState;
-
-            ImmutableHashSet<TPrimitiveType> mergedLiteralValues = LiteralValues.Union(otherPrimitiveState.LiteralValues);
-            ValueContainsNonLiteralState mergedNonLiteralState = Merge(NonLiteralState, otherPrimitiveState.NonLiteralState);
-            return Create(mergedLiteralValues, mergedNonLiteralState);
+                
+            ImmutableHashSet<TPrimitiveType> mergedLiteralValues = LiteralValues.Union(otherState.LiteralValues);
+            ValueContainsNonLiteralState mergedNonLiteralState = Merge(NonLiteralState, otherState.NonLiteralState);
+            return CreateMergedOrIntersectedValue(mergedLiteralValues, mergedNonLiteralState);
         }
 
         private static ValueContainsNonLiteralState Merge(ValueContainsNonLiteralState value1, ValueContainsNonLiteralState value2)
@@ -102,34 +98,43 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 
             // Merge Literals
             var mergedLiteralValues = this.LiteralValues.Intersect(value2.LiteralValues);
-            return mergedLiteralValues.IsEmpty ? InvalidState : Create(mergedLiteralValues, ValueContainsNonLiteralState.No);
+            var mergedNonLiteralState = mergedLiteralValues.IsEmpty ? ValueContainsNonLiteralState.Invalid : ValueContainsNonLiteralState.No;
+            return CreateMergedOrIntersectedValue(mergedLiteralValues, mergedNonLiteralState);
         }
 
+        protected abstract TPrimitiveType MergeBinaryOperator(TPrimitiveType leftLiteral, TPrimitiveType rightLiteral, BinaryOperatorKind binaryOperatorKind);
+        protected abstract bool IsSupportedBinaryOperatorForMerge(BinaryOperatorKind binaryOperatorKind);
+
         /// <summary>
-        /// Performs the union of this state and the other state for a Binary add operation
-        /// and returns a new <see cref="StringContentAbstractValue"/> with the result.
+        /// Performs the union of this state and the other state for a Binary operation
+        /// and returns a new value with the result.
         /// </summary>
-        public StringContentAbstractValue MergeBinaryAdd(StringContentAbstractValue otherState)
+        public AbstractPrimitiveValue<TValue, TPrimitiveType> MergeBinaryOperator(AbstractPrimitiveValue<TValue, TPrimitiveType> otherState, BinaryOperatorKind binaryOperatorKind)
         {
             if (otherState == null)
             {
                 throw new ArgumentNullException(nameof(otherState));
             }
 
+            if (!IsSupportedBinaryOperatorForMerge(binaryOperatorKind))
+            {
+                return MayBeContainsNonLiteralPrimitiveState;
+            }
+
             // Merge Literals
-            var builder = ImmutableHashSet.CreateBuilder<string>();
+            var builder = ImmutableHashSet.CreateBuilder<TPrimitiveType>();
             foreach (var leftLiteral in LiteralValues)
             {
                 foreach (var rightLiteral in otherState.LiteralValues)
                 {
-                    builder.Add(leftLiteral + rightLiteral);
+                    builder.Add(MergeBinaryOperator(leftLiteral, rightLiteral, binaryOperatorKind));
                 }
             }
 
-            ImmutableHashSet<string> mergedLiteralValues = builder.ToImmutable();
+            ImmutableHashSet<TPrimitiveType> mergedLiteralValues = builder.ToImmutable();
             ValueContainsNonLiteralState mergedNonLiteralState = Merge(NonLiteralState, otherState.NonLiteralState);
 
-            return new StringContentAbstractValue(mergedLiteralValues, mergedNonLiteralState);
+            return CreateMergedOrIntersectedValue(mergedLiteralValues, mergedNonLiteralState);
         }
 
         /// <summary>
@@ -137,5 +142,11 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
         /// </summary>
         public override string ToString() =>
             string.Format(CultureInfo.InvariantCulture, "L({0}) NL:{1}", LiteralValues.Count, NonLiteralState.ToString()[0]);
+
+        #region IAbstractValue implementation
+        IAbstractValue IAbstractValue.MayBeOrUnknownValue => MayBeContainsNonLiteralPrimitiveState;
+
+        IAbstractValue IAbstractValue.Merge(IAbstractValue otherState) => Merge(otherState as AbstractPrimitiveValue<TValue, TPrimitiveType>);
+        #endregion
     }
 }

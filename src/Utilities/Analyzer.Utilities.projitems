@@ -62,8 +62,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\PointsToAnalysis\PointsToAnalysisData.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\PointsToAnalysis\PointsToBlockAnalysisResult.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ValueAnalysis\AbstractPrimitiveValue.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ValueAnalysis\StringContainsNonLiteralState.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ValueAnalysis\AbstractValue.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ValueAnalysis\ValueContainsNonLiteralState.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ValueAnalysis\IAbstractValue.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ValueAnalysis\StringContentAbstractValue.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ValueAnalysis\StringContentAnalysis.CoreAnalysisDataDomain.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ValueAnalysis\StringContentAnalysis.cs" />

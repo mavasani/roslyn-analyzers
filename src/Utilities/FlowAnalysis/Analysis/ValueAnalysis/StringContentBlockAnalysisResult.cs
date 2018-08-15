@@ -6,12 +6,12 @@ using System.Collections.Immutable;
 namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 {
     /// <summary>
-    /// Result from execution of <see cref="StringContentAnalysis"/> on a basic block.
+    /// Result from execution of <see cref="ValueContentAnalysis"/> on a basic block.
     /// It stores string content values for each <see cref="AnalysisEntity"/> at the start and end of the basic block.
     /// </summary>
-    internal class StringContentBlockAnalysisResult : AbstractBlockAnalysisResult
+    internal class ValueContentBlockAnalysisResult : AbstractBlockAnalysisResult
     {
-        public StringContentBlockAnalysisResult(BasicBlock basicBlock, DataFlowAnalysisInfo<StringContentAnalysisData> blockAnalysisData)
+        public ValueContentBlockAnalysisResult(BasicBlock basicBlock, DataFlowAnalysisInfo<ValueContentAnalysisData> blockAnalysisData)
             : base(basicBlock)
         {
             InputData = blockAnalysisData.Input?.CoreAnalysisData.ToImmutableDictionary() ?? ImmutableDictionary<AnalysisEntity, StringContentAbstractValue>.Empty;

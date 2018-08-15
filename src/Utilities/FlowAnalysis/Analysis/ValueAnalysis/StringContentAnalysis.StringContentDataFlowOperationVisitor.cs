@@ -8,15 +8,15 @@ using Microsoft.CodeAnalysis.Operations;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 {
-    internal partial class StringContentAnalysis : ForwardDataFlowAnalysis<StringContentAnalysisData, StringContentBlockAnalysisResult, StringContentAbstractValue>
+    internal partial class ValueContentAnalysis : ForwardDataFlowAnalysis<ValueContentAnalysisData, ValueContentBlockAnalysisResult, StringContentAbstractValue>
     {
         /// <summary>
         /// Operation visitor to flow the string content values across a given statement in a basic block.
         /// </summary>
-        private sealed class StringContentDataFlowOperationVisitor : AnalysisEntityDataFlowOperationVisitor<StringContentAnalysisData, StringContentAbstractValue>
+        private sealed class StringContentDataFlowOperationVisitor : AnalysisEntityDataFlowOperationVisitor<ValueContentAnalysisData, StringContentAbstractValue>
         {
             public StringContentDataFlowOperationVisitor(
-                StringContentAbstractValueDomain valueDomain,
+                ValueContentAbstractValueDomain valueDomain,
                 ISymbol owningSymbol,
                 WellKnownTypeProvider wellKnownTypeProvider,
                 ControlFlowGraph cfg,
@@ -32,7 +32,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 
             protected override void SetAbstractValue(AnalysisEntity analysisEntity, StringContentAbstractValue value) => SetAbstractValue(CurrentAnalysisData, analysisEntity, value);
 
-            private static void SetAbstractValue(StringContentAnalysisData analysisData, AnalysisEntity analysisEntity, StringContentAbstractValue value)
+            private static void SetAbstractValue(ValueContentAnalysisData analysisData, AnalysisEntity analysisEntity, StringContentAbstractValue value)
             {
                 // PERF: Avoid creating an entry if the value is the default unknown value.
                 if (value == StringContentAbstractValue.MayBeContainsNonLiteralState &&
@@ -52,21 +52,21 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 
             protected override StringContentAbstractValue GetAbstractDefaultValue(ITypeSymbol type) => StringContentAbstractValue.DoesNotContainLiteralOrNonLiteralState;
 
-            protected override bool HasAnyAbstractValue(StringContentAnalysisData data) => data.HasAnyAbstractValue;
+            protected override bool HasAnyAbstractValue(ValueContentAnalysisData data) => data.HasAnyAbstractValue;
 
             protected override void ResetCurrentAnalysisData() => CurrentAnalysisData.Reset(ValueDomain.UnknownOrMayBeValue);
 
             #region Predicate analysis
-            protected override StringContentAnalysisData GetEmptyAnalysisDataForPredicateAnalysis() => new StringContentAnalysisData();
+            protected override ValueContentAnalysisData GetEmptyAnalysisDataForPredicateAnalysis() => new ValueContentAnalysisData();
 
-            protected override PredicateValueKind SetValueForIsNullComparisonOperator(IOperation leftOperand, bool equals, StringContentAnalysisData targetAnalysisData) => PredicateValueKind.Unknown;
+            protected override PredicateValueKind SetValueForIsNullComparisonOperator(IOperation leftOperand, bool equals, ValueContentAnalysisData targetAnalysisData) => PredicateValueKind.Unknown;
 
             protected override PredicateValueKind SetValueForEqualsOrNotEqualsComparisonOperator(
                 IOperation leftOperand,
                 IOperation rightOperand,
                 bool equals,
                 bool isReferenceEquality,
-                StringContentAnalysisData targetAnalysisData)
+                ValueContentAnalysisData targetAnalysisData)
             {
                 var predicateValueKind = PredicateValueKind.Unknown;
 
@@ -79,7 +79,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
                 return predicateValueKind;
             }
 
-            private void SetValueForComparisonOperator(IOperation target, IOperation assignedValue, bool equals, ref PredicateValueKind predicateValueKind, StringContentAnalysisData targetAnalysisData)
+            private void SetValueForComparisonOperator(IOperation target, IOperation assignedValue, bool equals, ref PredicateValueKind predicateValueKind, ValueContentAnalysisData targetAnalysisData)
             {
                 StringContentAbstractValue stringContentValue = GetCachedAbstractValue(assignedValue);
                 if (stringContentValue.IsLiteralState &&
@@ -126,11 +126,11 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 
             #endregion
 
-            protected override StringContentAnalysisData MergeAnalysisData(StringContentAnalysisData value1, StringContentAnalysisData value2)
+            protected override ValueContentAnalysisData MergeAnalysisData(ValueContentAnalysisData value1, ValueContentAnalysisData value2)
                 => s_AnalysisDomain.Merge(value1, value2);
-            protected override StringContentAnalysisData GetClonedAnalysisData(StringContentAnalysisData analysisData)
-                => (StringContentAnalysisData)analysisData.Clone();
-            protected override bool Equals(StringContentAnalysisData value1, StringContentAnalysisData value2)
+            protected override ValueContentAnalysisData GetClonedAnalysisData(ValueContentAnalysisData analysisData)
+                => (ValueContentAnalysisData)analysisData.Clone();
+            protected override bool Equals(ValueContentAnalysisData value1, ValueContentAnalysisData value2)
                 => value1.Equals(value2);
 
             #region Visitor methods
