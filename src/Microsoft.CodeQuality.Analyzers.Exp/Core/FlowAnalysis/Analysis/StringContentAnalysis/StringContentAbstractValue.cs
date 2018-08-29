@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Analyzer.Utilities;
+using Analyzer.Utilities.Extensions;
 
 namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
 {
@@ -14,31 +15,48 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
     /// </summary>
     internal partial class StringContentAbstractValue : CacheBasedEquatable<StringContentAbstractValue>
     {
-        public static readonly StringContentAbstractValue UndefinedState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, StringContainsNonLiteralState.Undefined);
-        public static readonly StringContentAbstractValue InvalidState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, StringContainsNonLiteralState.Invalid);
-        public static readonly StringContentAbstractValue MayBeContainsNonLiteralState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, StringContainsNonLiteralState.Maybe);
-        public static readonly StringContentAbstractValue DoesNotContainLiteralOrNonLiteralState = new StringContentAbstractValue(ImmutableHashSet<string>.Empty, StringContainsNonLiteralState.No);
-        private static readonly StringContentAbstractValue ContainsEmpyStringLiteralState = new StringContentAbstractValue(ImmutableHashSet.Create(string.Empty), StringContainsNonLiteralState.No);
+        public static readonly StringContentAbstractValue UndefinedState = new StringContentAbstractValue(ImmutableHashSet<object>.Empty, StringContainsNonLiteralState.Undefined);
+        public static readonly StringContentAbstractValue InvalidState = new StringContentAbstractValue(ImmutableHashSet<object>.Empty, StringContainsNonLiteralState.Invalid);
+        public static readonly StringContentAbstractValue MayBeContainsNonLiteralState = new StringContentAbstractValue(ImmutableHashSet<object>.Empty, StringContainsNonLiteralState.Maybe);
+        public static readonly StringContentAbstractValue DoesNotContainLiteralOrNonLiteralState = new StringContentAbstractValue(ImmutableHashSet<object>.Empty, StringContainsNonLiteralState.No);
+        private static readonly StringContentAbstractValue ContainsEmpyStringLiteralState = new StringContentAbstractValue(ImmutableHashSet.Create<object>(string.Empty), StringContainsNonLiteralState.No);
+        private static readonly StringContentAbstractValue ContainsZeroIntergralLiteralState = new StringContentAbstractValue(ImmutableHashSet.Create<object>(0), StringContainsNonLiteralState.No);
+        private static readonly StringContentAbstractValue ContainsTrueLiteralState = new StringContentAbstractValue(ImmutableHashSet.Create<object>(true), StringContainsNonLiteralState.No);
+        private static readonly StringContentAbstractValue ContainsFalseLiteralState = new StringContentAbstractValue(ImmutableHashSet.Create<object>(false), StringContainsNonLiteralState.No);
 
-        public static StringContentAbstractValue Create(string literal)
+        public static StringContentAbstractValue Create(object literal, ITypeSymbol type)
         {
-            if (literal.Length > 0)
+            if (type.IsPrimitiveIntegralOrFloatType() &&
+                DiagnosticHelpers.TryConvertToUInt64(literal, type.SpecialType, out ulong convertedValue) &&
+                convertedValue == 0)
             {
-                return new StringContentAbstractValue(ImmutableHashSet.Create(literal), StringContainsNonLiteralState.No);
+                return ContainsZeroIntergralLiteralState;
             }
-            else
+
+            switch (type.SpecialType)
             {
-                return ContainsEmpyStringLiteralState;
+                case SpecialType.System_String:
+                    if (((string)literal).Length == 0)
+                    {
+                        return ContainsEmpyStringLiteralState;
+                    }
+
+                    break;
+
+                case SpecialType.System_Boolean:
+                    return ((bool)literal) ? ContainsTrueLiteralState : ContainsFalseLiteralState;
             }
+
+            return new StringContentAbstractValue(ImmutableHashSet.Create(literal), StringContainsNonLiteralState.No);
         }
 
-        private StringContentAbstractValue(ImmutableHashSet<string> literalValues, StringContainsNonLiteralState nonLiteralState)
+        private StringContentAbstractValue(ImmutableHashSet<object> literalValues, StringContainsNonLiteralState nonLiteralState)
         {
             LiteralValues = literalValues;
             NonLiteralState = nonLiteralState;
         }
 
-        private static StringContentAbstractValue Create(ImmutableHashSet<string> literalValues, StringContainsNonLiteralState nonLiteralState)
+        private static StringContentAbstractValue Create(ImmutableHashSet<object> literalValues, StringContainsNonLiteralState nonLiteralState)
         {
             if (literalValues.IsEmpty)
             {
@@ -54,6 +72,31 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
                         return MayBeContainsNonLiteralState;
                 }
             }
+            else if(literalValues.Count == 1 && nonLiteralState == StringContainsNonLiteralState.No)
+            {
+                switch (literalValues.Single())
+                {
+                    case bool boolVal:
+                        return boolVal ? ContainsTrueLiteralState : ContainsFalseLiteralState;
+
+                    case string stringVal:
+                        if (stringVal.Length == 0)
+                        {
+                            return ContainsEmpyStringLiteralState;
+                        }
+
+                        break;
+
+                    case int intValue:
+                        if (intValue == 0)
+                        {
+                            return ContainsZeroIntergralLiteralState;
+                        }
+
+                        break;
+                }
+            }
+
 
             return new StringContentAbstractValue(literalValues, nonLiteralState);
         }
@@ -66,7 +109,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
         /// <summary>
         /// Gets a collection of the string literals that could possibly make up the contents of this string <see cref="Operand"/>.
         /// </summary>
-        public ImmutableHashSet<string> LiteralValues { get; }
+        public ImmutableHashSet<object> LiteralValues { get; }
 
         protected override int ComputeHashCode()
         {
@@ -90,7 +133,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
                 throw new ArgumentNullException(nameof(otherState));
             }
 
-            ImmutableHashSet<string> mergedLiteralValues = LiteralValues.Union(otherState.LiteralValues);
+            ImmutableHashSet<object> mergedLiteralValues = LiteralValues.Union(otherState.LiteralValues);
             StringContainsNonLiteralState mergedNonLiteralState = Merge(NonLiteralState, otherState.NonLiteralState);
             return Create(mergedLiteralValues, mergedNonLiteralState);
         }
@@ -136,7 +179,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
         /// Performs the union of this state and the other state for a Binary add operation
         /// and returns a new <see cref="StringContentAbstractValue"/> with the result.
         /// </summary>
-        public StringContentAbstractValue MergeBinaryAdd(StringContentAbstractValue otherState)
+        public StringContentAbstractValue MergeBinaryOperation(StringContentAbstractValue otherState, BinaryOperatorKind binaryOperatorKind, ITypeSymbol leftType, ITypeSymbol rightType)
         {
             if (otherState == null)
             {
@@ -144,16 +187,21 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
             }
 
             // Merge Literals
-            var builder = ImmutableHashSet.CreateBuilder<string>();
+            var builder = ImmutableHashSet.CreateBuilder<object>();
             foreach (var leftLiteral in LiteralValues)
             {
                 foreach (var rightLiteral in otherState.LiteralValues)
                 {
-                    builder.Add(leftLiteral + rightLiteral);
+                    if (!TryMerge(leftLiteral, rightLiteral, binaryOperatorKind, leftType, rightType, out object result))
+                    {
+                        return MayBeContainsNonLiteralState;
+                    }
+
+                    builder.Add(result);
                 }
             }
 
-            ImmutableHashSet<string> mergedLiteralValues = builder.ToImmutable();
+            ImmutableHashSet<object> mergedLiteralValues = builder.ToImmutable();
             StringContainsNonLiteralState mergedNonLiteralState = Merge(NonLiteralState, otherState.NonLiteralState);
 
             return new StringContentAbstractValue(mergedLiteralValues, mergedNonLiteralState);
@@ -164,5 +212,366 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
         /// </summary>
         public override string ToString() =>
             string.Format(CultureInfo.InvariantCulture, "L({0}) NL:{1}", LiteralValues.Count, NonLiteralState.ToString()[0]);
+
+        private static bool TryMerge(object value1, object value2, BinaryOperatorKind binaryOperatorKind, ITypeSymbol type1, ITypeSymbol type2, out object result)
+        {
+            result = null;
+
+            switch (type1.SpecialType)
+            {
+                case SpecialType.System_String:
+                    return type2.SpecialType == SpecialType.System_String &&
+                        TryMerge((string)value1, (string)value2, binaryOperatorKind, out result);
+
+                case SpecialType.System_Boolean:
+                    return type2.SpecialType == SpecialType.System_Boolean &&
+                        TryMerge((bool)value1, (bool)value2, binaryOperatorKind, out result);
+
+                case SpecialType.System_Byte:
+                case SpecialType.System_Int16:
+                case SpecialType.System_Int32:
+                case SpecialType.System_Int64:
+                case SpecialType.System_UInt16:
+                case SpecialType.System_UInt32:
+                case SpecialType.System_SByte:
+                    switch (type2.SpecialType)
+                    {
+                        case SpecialType.System_UInt64:
+                            return TryMerge((ulong)value1, (ulong)value2, binaryOperatorKind, out result);
+
+                        case SpecialType.System_Byte:
+                        case SpecialType.System_Int16:
+                        case SpecialType.System_Int32:
+                        case SpecialType.System_Int64:
+                        case SpecialType.System_UInt16:
+                        case SpecialType.System_UInt32:
+                        case SpecialType.System_SByte:
+                            return TryMerge((long)value1, (long)value2, binaryOperatorKind, out result);
+                    }
+
+                    break;
+
+                case SpecialType.System_UInt64:
+                    switch (type2.SpecialType)
+                    {
+                        case SpecialType.System_Byte:
+                        case SpecialType.System_Int16:
+                        case SpecialType.System_Int32:
+                        case SpecialType.System_Int64:
+                        case SpecialType.System_UInt16:
+                        case SpecialType.System_UInt32:
+                        case SpecialType.System_UInt64:
+                        case SpecialType.System_SByte:
+                            return TryMerge((ulong)value1, (ulong)value2, binaryOperatorKind, out result);
+                    }
+
+                    break;
+
+                case SpecialType.System_Double:
+                case SpecialType.System_Single:
+                    switch (type2.SpecialType)
+                    {
+                        case SpecialType.System_Single:
+                        case SpecialType.System_Double:
+                            return TryMerge((double)value1, (double)value2, binaryOperatorKind, out result);
+                    }
+
+                    break;
+            }
+
+            return false;
+        }
+
+        private static bool TryMerge(string value1, string value2, BinaryOperatorKind binaryOperatorKind, out object result)
+        {
+            if (value1 != null && value2 != null)
+            {
+                switch (binaryOperatorKind)
+                {
+                    case BinaryOperatorKind.Add:
+                    case BinaryOperatorKind.Concatenate:
+                        result = value1 + value2;
+                        return true;
+                }
+            }
+
+            result = null;
+            return false;
+        }
+
+        private static bool TryMerge(bool value1, bool value2, BinaryOperatorKind binaryOperatorKind, out object result)
+        {
+            switch (binaryOperatorKind)
+            {
+                case BinaryOperatorKind.And:
+                case BinaryOperatorKind.ConditionalAnd:
+                    result = value1 && value2;
+                    return true;
+
+                case BinaryOperatorKind.Or:
+                case BinaryOperatorKind.ConditionalOr:
+                    result = value1 || value2;
+                    return true;
+
+                case BinaryOperatorKind.Equals:
+                    result = value1 == value2;
+                    return true;
+
+                case BinaryOperatorKind.NotEquals:
+                    result = value1 != value2;
+                    return true;
+            }
+
+            result = null;
+            return false;
+        }
+
+        private static bool TryMerge(long value1, long value2, BinaryOperatorKind binaryOperatorKind, out object result)
+        {
+            switch (binaryOperatorKind)
+            {
+                case BinaryOperatorKind.Add:
+                    result = value1 + value2;
+                    return true;
+
+                case BinaryOperatorKind.Subtract:
+                    result = value1 - value2;
+                    return true;
+
+                case BinaryOperatorKind.Multiply:
+                    result = value1 * value2;
+                    return true;
+
+                case BinaryOperatorKind.Divide:
+                    if (value2 != 0)
+                    {
+                        result = value1 / value2;
+                        return true;
+                    }
+
+                    break;
+
+                case BinaryOperatorKind.And:
+                    result = value1 & value2;
+                    return true;
+
+                case BinaryOperatorKind.Or:
+                    result = value1 | value2;
+                    return true;
+
+                case BinaryOperatorKind.Remainder:
+                    result = value1 % value2;
+                    return true;
+
+                case BinaryOperatorKind.Power:
+                    result = Math.Pow(value1, value2);
+                    return true;
+
+                case BinaryOperatorKind.LeftShift:
+                    var intValue2 = (int)value2;
+                    if (intValue2 == value2)
+                    {
+                        result = value1 << intValue2;
+                        return true;
+                    }
+
+                    break;
+
+                case BinaryOperatorKind.RightShift:
+                    intValue2 = (int)value2;
+                    if (intValue2 == value2)
+                    {
+                        result = value1 >> intValue2;
+                        return true;
+                    }
+
+                    break;
+
+                case BinaryOperatorKind.ExclusiveOr:
+                    result = value1 ^ value2;
+                    return true;
+
+                case BinaryOperatorKind.Equals:
+                    result = value1 == value2;
+                    return true;
+
+                case BinaryOperatorKind.NotEquals:
+                    result = value1 != value2;
+                    return true;
+
+                case BinaryOperatorKind.LessThan:
+                    result = value1 < value2;
+                    return true;
+
+                case BinaryOperatorKind.LessThanOrEqual:
+                    result = value1 <= value2;
+                    return true;
+
+                case BinaryOperatorKind.GreaterThan:
+                    result = value1 > value2;
+                    return true;
+
+                case BinaryOperatorKind.GreaterThanOrEqual:
+                    result = value1 >= value2;
+                    return true;
+            }
+
+            result = null;
+            return false;
+        }
+
+        private static bool TryMerge(ulong value1, ulong value2, BinaryOperatorKind binaryOperatorKind, out object result)
+        {
+            switch (binaryOperatorKind)
+            {
+                case BinaryOperatorKind.Add:
+                    result = value1 + value2;
+                    return true;
+
+                case BinaryOperatorKind.Subtract:
+                    result = value1 - value2;
+                    return true;
+
+                case BinaryOperatorKind.Multiply:
+                    result = value1 * value2;
+                    return true;
+
+                case BinaryOperatorKind.Divide:
+                    if (value2 != 0)
+                    {
+                        result = value1 / value2;
+                        return true;
+                    }
+
+                    break;
+
+                case BinaryOperatorKind.And:
+                    result = value1 & value2;
+                    return true;
+
+                case BinaryOperatorKind.Or:
+                    result = value1 | value2;
+                    return true;
+
+                case BinaryOperatorKind.Remainder:
+                    result = value1 % value2;
+                    return true;
+
+                case BinaryOperatorKind.Power:
+                    result = Math.Pow(value1, value2);
+                    return true;
+
+                case BinaryOperatorKind.LeftShift:
+                    if ((uint)value2 == value2)
+                    {
+                        result = value1 << (int)value2;
+                        return true;
+                    }
+
+                    break;
+
+                case BinaryOperatorKind.RightShift:
+                    if ((uint)value2 == value2)
+                    {
+                        result = value1 >> (int)value2;
+                        return true;
+                    }
+
+                    break;
+
+                case BinaryOperatorKind.ExclusiveOr:
+                    result = value1 ^ value2;
+                    return true;
+
+                case BinaryOperatorKind.Equals:
+                    result = value1 == value2;
+                    return true;
+
+                case BinaryOperatorKind.NotEquals:
+                    result = value1 != value2;
+                    return true;
+
+                case BinaryOperatorKind.LessThan:
+                    result = value1 < value2;
+                    return true;
+
+                case BinaryOperatorKind.LessThanOrEqual:
+                    result = value1 <= value2;
+                    return true;
+
+                case BinaryOperatorKind.GreaterThan:
+                    result = value1 > value2;
+                    return true;
+
+                case BinaryOperatorKind.GreaterThanOrEqual:
+                    result = value1 >= value2;
+                    return true;
+            }
+
+            result = null;
+            return false;
+        }
+
+        private static bool TryMerge(double value1, double value2, BinaryOperatorKind binaryOperatorKind, out object result)
+        {
+            switch (binaryOperatorKind)
+            {
+                case BinaryOperatorKind.Add:
+                    result = value1 + value2;
+                    return true;
+
+                case BinaryOperatorKind.Subtract:
+                    result = value1 - value2;
+                    return true;
+
+                case BinaryOperatorKind.Multiply:
+                    result = value1 * value2;
+                    return true;
+
+                case BinaryOperatorKind.Divide:
+                    if (value2 != 0)
+                    {
+                        result = value1 / value2;
+                        return true;
+                    }
+
+                    break;
+
+                case BinaryOperatorKind.Remainder:
+                    result = value1 % value2;
+                    return true;
+
+                case BinaryOperatorKind.Power:
+                    result = Math.Pow(value1, value2);
+                    return true;
+
+                case BinaryOperatorKind.Equals:
+                    result = value1 == value2;
+                    return true;
+
+                case BinaryOperatorKind.NotEquals:
+                    result = value1 != value2;
+                    return true;
+
+                case BinaryOperatorKind.LessThan:
+                    result = value1 < value2;
+                    return true;
+
+                case BinaryOperatorKind.LessThanOrEqual:
+                    result = value1 <= value2;
+                    return true;
+
+                case BinaryOperatorKind.GreaterThan:
+                    result = value1 > value2;
+                    return true;
+
+                case BinaryOperatorKind.GreaterThanOrEqual:
+                    result = value1 >= value2;
+                    return true;
+            }
+
+            result = null;
+            return false;
+        }
     }
 }

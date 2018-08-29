@@ -151,7 +151,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
                     case BinaryOperatorKind.Concatenate:
                         var leftValue = Visit(operation.LeftOperand, argument);
                         var rightValue = Visit(operation.RightOperand, argument);
-                        return leftValue.MergeBinaryAdd(rightValue);
+                        return leftValue.MergeBinaryOperation(rightValue);
 
                     default:
                         return base.VisitBinaryOperator_NonConditional(operation, argument);
@@ -164,7 +164,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
                 {
                     case BinaryOperatorKind.Add:
                     case BinaryOperatorKind.Concatenate:
-                        return targetValue.MergeBinaryAdd(assignedValue);
+                        return targetValue.MergeBinaryOperation(assignedValue);
 
                     default:
                         return base.ComputeValueForCompoundAssignment(operation, targetValue, assignedValue);
@@ -221,7 +221,7 @@ namespace Microsoft.CodeAnalysis.Operations.DataFlow.StringContentAnalysis
                 for (int i = 1; i < operation.Parts.Length; i++)
                 {
                     var newValue = Visit(operation.Parts[i], argument);
-                    mergedValue = mergedValue.MergeBinaryAdd(newValue);
+                    mergedValue = mergedValue.MergeBinaryOperation(newValue);
                 }
 
                 return mergedValue;
