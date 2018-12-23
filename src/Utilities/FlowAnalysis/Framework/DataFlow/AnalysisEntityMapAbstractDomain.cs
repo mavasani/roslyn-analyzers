@@ -43,7 +43,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
                 return ValueDomain.Merge(value, defaultValue);
             }
 
-            var resultMap = new DictionaryAnalysisData<AnalysisEntity, TValue>();
+            var resultMap = new DictionaryAnalysisData<AnalysisEntity, TValue>(map1.Count + map2.Count);
             var newKeys = PooledHashSet<AnalysisEntity>.GetInstance();
 
             var map2LookupIgnoringInstanceLocation = map2.Keys.Where(IsAnalysisEntityForFieldOrProperty)

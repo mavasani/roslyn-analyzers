@@ -17,6 +17,11 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             _coreAnalysisData = PooledDictionary<TKey, TValue>.GetInstance();
         }
 
+        public DictionaryAnalysisData(int capacity)
+        {
+            _coreAnalysisData = PooledDictionary<TKey, TValue>.GetInstance(capacity);
+        }
+
         public DictionaryAnalysisData(IDictionary<TKey, TValue> initializer)
         {
             _coreAnalysisData = PooledDictionary<TKey, TValue>.GetInstance(initializer);

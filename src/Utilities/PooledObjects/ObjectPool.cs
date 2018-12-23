@@ -49,7 +49,7 @@ namespace Microsoft.CodeAnalysis
         /// Not using System.Func{T} because this file is linked into the (debugger) Formatter,
         /// which does not have that type (since it compiles against .NET 2.0).
         /// </remarks>
-        internal delegate T Factory();
+        internal delegate T Factory(int? capacityOpt);
 
         // Storage for the pool objects. The first item is stored in a dedicated field because we
         // expect to be able to satisfy most requests from it.
@@ -113,9 +113,9 @@ namespace Microsoft.CodeAnalysis
             _items = new Element[size - 1];
         }
 
-        private T CreateInstance()
+        private T CreateInstance(int? capacityOpt)
         {
-            var inst = _factory();
+            var inst = _factory(capacityOpt);
             return inst;
         }
 
@@ -127,7 +127,7 @@ namespace Microsoft.CodeAnalysis
         /// Note that Free will try to store recycled objects close to the start thus statistically 
         /// reducing how far we will typically search.
         /// </remarks>
-        internal T Allocate()
+        internal T Allocate(int? capacityOpt = null, Func<T, int> getCapacityOpt = null)
         {
             // PERF: Examine the first element. If that fails, AllocateSlow will look at the remaining elements.
             // Note that the initial read is optimistically not synchronized. That is intentional. 
@@ -136,7 +136,7 @@ namespace Microsoft.CodeAnalysis
             T inst = _firstItem;
             if (inst == null || inst != Interlocked.CompareExchange(ref _firstItem, null, inst))
             {
-                inst = AllocateSlow();
+                inst = AllocateSlow(capacityOpt, getCapacityOpt);
             }
 
 #if DETECT_LEAKS
@@ -151,7 +151,7 @@ namespace Microsoft.CodeAnalysis
             return inst;
         }
 
-        private T AllocateSlow()
+        private T AllocateSlow(int? capacityOpt, Func<T, int> getCapacityOpt)
         {
             var items = _items;
 
@@ -161,7 +161,7 @@ namespace Microsoft.CodeAnalysis
                 // We will interlock only when we have a candidate. in a worst case we may miss some
                 // recently returned objects. Not a big deal.
                 T inst = items[i].Value;
-                if (inst != null)
+                if (inst != null && (getCapacityOpt == null || getCapacityOpt(inst) >= capacityOpt))
                 {
                     if (inst == Interlocked.CompareExchange(ref items[i].Value, null, inst))
                     {
@@ -170,7 +170,7 @@ namespace Microsoft.CodeAnalysis
                 }
             }
 
-            return CreateInstance();
+            return CreateInstance(capacityOpt);
         }
 
         /// <summary>

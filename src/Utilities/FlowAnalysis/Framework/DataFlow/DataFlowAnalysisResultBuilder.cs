@@ -15,9 +15,9 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
     {
         private readonly PooledDictionary<BasicBlock, DataFlowAnalysisInfo<TAnalysisData>> _info;
 
-        public DataFlowAnalysisResultBuilder()
+        public DataFlowAnalysisResultBuilder(int blockCount)
         {
-            _info = PooledDictionary<BasicBlock, DataFlowAnalysisInfo<TAnalysisData>>.GetInstance();
+            _info = PooledDictionary<BasicBlock, DataFlowAnalysisInfo<TAnalysisData>>.GetInstance(blockCount);
         }
 
         public DataFlowAnalysisInfo<TAnalysisData> this[BasicBlock block] => _info[block];

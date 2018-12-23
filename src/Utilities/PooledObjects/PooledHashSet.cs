@@ -47,7 +47,7 @@ namespace Microsoft.CodeAnalysis
         public static ObjectPool<PooledHashSet<T>> CreatePool()
         {
             ObjectPool<PooledHashSet<T>> pool = null;
-            pool = new ObjectPool<PooledHashSet<T>>(() => new PooledHashSet<T>(pool), 128);
+            pool = new ObjectPool<PooledHashSet<T>>((int? capacityOpt) => new PooledHashSet<T>(pool), 128);
             return pool;
         }
 

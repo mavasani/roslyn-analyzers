@@ -49,12 +49,12 @@ namespace Microsoft.CodeAnalysis
             _builder = ImmutableArray.CreateBuilder<T>(size);
         }
 
-        public ArrayBuilder() :
-            this(8)
+        public ArrayBuilder(int? capacityOpt) :
+            this(capacityOpt.HasValue ? capacityOpt.Value : 8)
         { }
 
-        private ArrayBuilder(ObjectPool<ArrayBuilder<T>> pool) :
-            this()
+        private ArrayBuilder(ObjectPool<ArrayBuilder<T>> pool, int? capacityOpt) :
+            this(capacityOpt)
         {
             _pool = pool;
         }
@@ -366,7 +366,7 @@ namespace Microsoft.CodeAnalysis
         public static ObjectPool<ArrayBuilder<T>> CreatePool(int size)
         {
             ObjectPool<ArrayBuilder<T>> pool = null;
-            pool = new ObjectPool<ArrayBuilder<T>>(() => new ArrayBuilder<T>(pool), size);
+            pool = new ObjectPool<ArrayBuilder<T>>((int? capacityOpt) => new ArrayBuilder<T>(pool, capacityOpt), size);
             return pool;
         }
 

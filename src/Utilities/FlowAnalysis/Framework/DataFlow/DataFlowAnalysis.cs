@@ -52,7 +52,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         private TAnalysisResult Run(TAnalysisContext analysisContext)
         {
             var cfg = analysisContext.ControlFlowGraph;
-            var resultBuilder = new DataFlowAnalysisResultBuilder<TAnalysisData>();
+            var resultBuilder = new DataFlowAnalysisResultBuilder<TAnalysisData>(cfg.Blocks.Length);
             var uniqueSuccessors = PooledHashSet<BasicBlock>.GetInstance();
             var finallyBlockSuccessorsMap = PooledDictionary<int, List<BranchWithInfo>>.GetInstance();
             var catchBlockInputDataMap = PooledDictionary<ControlFlowRegion, TAnalysisData>.GetInstance();

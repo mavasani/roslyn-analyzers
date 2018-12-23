@@ -198,7 +198,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
                 return null;
             }
 
-            var clonedMap = new DictionaryAnalysisData<AnalysisEntity, PerEntityPredicatedAnalysisData>();
+            var clonedMap = new DictionaryAnalysisData<AnalysisEntity, PerEntityPredicatedAnalysisData>(fromData.Count);
             foreach (var kvp in fromData)
             {
                 clonedMap.Add(kvp.Key, new PerEntityPredicatedAnalysisData(kvp.Value));
@@ -244,7 +244,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             Debug.Assert(predicatedData != null);
             Debug.Assert(coreAnalysisDataForOtherBranch != null);
 
-            var result = new DictionaryAnalysisData<AnalysisEntity, PerEntityPredicatedAnalysisData>();
+            var result = new DictionaryAnalysisData<AnalysisEntity, PerEntityPredicatedAnalysisData>(predicatedData.Count);
             foreach (var kvp in predicatedData)
             {
                 var resultTruePredicatedData = MergeForPredicatedDataInOneBranch(kvp.Value.TruePredicatedData, coreAnalysisDataForOtherBranch, coreDataAnalysisDomain);
@@ -282,7 +282,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             Debug.Assert(coreAnalysisData1 != null);
             Debug.Assert(coreAnalysisData2 != null);
 
-            var result = new DictionaryAnalysisData<AnalysisEntity, PerEntityPredicatedAnalysisData>();
+            var result = new DictionaryAnalysisData<AnalysisEntity, PerEntityPredicatedAnalysisData>(predicatedData1.Count);
             foreach (var kvp in predicatedData1)
             {
                 DictionaryAnalysisData<TKey, TValue> resultTruePredicatedData;

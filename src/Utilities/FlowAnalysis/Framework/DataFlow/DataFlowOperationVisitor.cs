@@ -666,24 +666,24 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         {
             Debug.Assert(CurrentBasicBlock != null);
             Debug.Assert(DataFlowAnalysisContext.PointsToAnalysisResultOpt != null);
-            var inputData = DataFlowAnalysisContext.PointsToAnalysisResultOpt[CurrentBasicBlock].InputData;
-            return inputData.TryGetValue(analysisEntity, out pointsToAbstractValue);
+            var pointsToResult = DataFlowAnalysisContext.PointsToAnalysisResultOpt[CurrentBasicBlock];
+            return pointsToResult.TryGetInputValue(analysisEntity, out pointsToAbstractValue);
         }
 
         protected bool TryGetPointsToAbstractValueAtCurrentBlockExit(AnalysisEntity analysisEntity, out PointsToAbstractValue pointsToAbstractValue)
         {
             Debug.Assert(CurrentBasicBlock != null);
             Debug.Assert(DataFlowAnalysisContext.PointsToAnalysisResultOpt != null);
-            var outputData = DataFlowAnalysisContext.PointsToAnalysisResultOpt[CurrentBasicBlock].OutputData;
-            return outputData.TryGetValue(analysisEntity, out pointsToAbstractValue);
+            var pointsToResult = DataFlowAnalysisContext.PointsToAnalysisResultOpt[CurrentBasicBlock];
+            return pointsToResult.TryGetOutputValue(analysisEntity, out pointsToAbstractValue);
         }
 
         protected bool TryGetNullAbstractValueAtCurrentBlockEntry(AnalysisEntity analysisEntity, out NullAbstractValue nullAbstractValue)
         {
             Debug.Assert(CurrentBasicBlock != null);
             Debug.Assert(DataFlowAnalysisContext.PointsToAnalysisResultOpt != null);
-            var inputData = DataFlowAnalysisContext.PointsToAnalysisResultOpt[CurrentBasicBlock].InputData;
-            if (inputData.TryGetValue(analysisEntity, out PointsToAbstractValue pointsToAbstractValue))
+            var pointsToResult = DataFlowAnalysisContext.PointsToAnalysisResultOpt[CurrentBasicBlock];
+            if(pointsToResult.TryGetInputValue(analysisEntity, out PointsToAbstractValue pointsToAbstractValue))
             {
                 nullAbstractValue = pointsToAbstractValue.NullState;
                 return true;

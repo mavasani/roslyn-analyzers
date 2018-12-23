@@ -30,7 +30,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.CopyAnalysis
                 CopyAnalysisData.AssertValidCopyAnalysisData(map1);
                 CopyAnalysisData.AssertValidCopyAnalysisData(map2);
 
-                var result = new DictionaryAnalysisData<AnalysisEntity, CopyAbstractValue>();
+                var result = new DictionaryAnalysisData<AnalysisEntity, CopyAbstractValue>(map1.Count + map2.Count);
                 foreach (var kvp in map1)
                 {
                     var key = kvp.Key;
