@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis
@@ -19,7 +20,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis
         {
         }
 
-        public PointsToAnalysisData(IDictionary<AnalysisEntity, PointsToAbstractValue> fromData)
+        public PointsToAnalysisData(ImmutableDictionary<AnalysisEntity, PointsToAbstractValue> fromData)
             : base(fromData)
         {
             AssertValidPointsToAnalysisData(fromData);

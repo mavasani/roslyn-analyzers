@@ -18,6 +18,8 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
 
         protected abstract TValue GetDefaultValue(AnalysisEntity analysisEntity);
         protected abstract bool CanSkipNewEntry(AnalysisEntity analysisEntity, TValue value);
+        private TValue GetMergedValueForEntityPresentInOneMap(AnalysisEntity key, TValue value)
+            => ValueDomain.Merge(value, GetDefaultValue(key));
 
         protected abstract void AssertValidEntryForMergedMap(AnalysisEntity analysisEntity, TValue value);
         protected virtual void AssertValidAnalysisData(DictionaryAnalysisData<AnalysisEntity, TValue> map)
@@ -37,17 +39,96 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             Debug.Assert(map2 != null);
             AssertValidAnalysisData(map2);
 
-            TValue GetMergedValueForEntityPresentInOneMap(AnalysisEntity key, TValue value)
-            {
-                var defaultValue = GetDefaultValue(key);
-                return ValueDomain.Merge(value, defaultValue);
-            }
+            var keysToMerge = map1.GetKeysToMerge(map2);
+            var fieldOrPropertySymbolsToMerge = PooledHashSet<ISymbol>.GetInstance();
 
-            var resultMap = new DictionaryAnalysisData<AnalysisEntity, TValue>();
+            try
+            {
+                var resultMap = new DictionaryAnalysisData<AnalysisEntity, TValue>(map1);
+                foreach (var key in keysToMerge)
+                {
+                    if (IsAnalysisEntityForFieldOrProperty(key))
+                    {
+                        fieldOrPropertySymbolsToMerge.Add(key.SymbolOpt);
+                        continue;
+                    }
+
+                    TValue mergedValue;
+                    if (map1.TryGetValue(key, out var value1))
+                    {
+                        if (map2.TryGetValue(key, out var value2))
+                        {
+                            mergedValue = ValueDomain.Merge(value1, value2);
+                            Debug.Assert(ValueDomain.Compare(value1, mergedValue) <= 0);
+                            Debug.Assert(ValueDomain.Compare(value2, mergedValue) <= 0);
+                        }
+                        else
+                        {
+                            mergedValue = GetMergedValueForEntityPresentInOneMap(key, value1);
+                            Debug.Assert(ValueDomain.Compare(value1, mergedValue) <= 0);
+                        }
+                    }
+                    else if (map2.TryGetValue(key, out var value2))
+                    {
+                        mergedValue = GetMergedValueForEntityPresentInOneMap(key, value2);
+                        Debug.Assert(ValueDomain.Compare(value2, mergedValue) <= 0);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    resultMap[key] = mergedValue;
+                }
+
+                if (fieldOrPropertySymbolsToMerge.Count > 0)
+                {
+                    var trimmedMap1 = GetTrimmedMapForFieldOrPropertyEntities(map1, fieldOrPropertySymbolsToMerge);
+                    var trimmedMap2 = GetTrimmedMapForFieldOrPropertyEntities(map2, fieldOrPropertySymbolsToMerge);
+                    var trimmedMergedMap = MergeForFieldOrPropertyEntities(trimmedMap1, trimmedMap2);
+                    foreach (var kvp in trimmedMergedMap)
+                    {
+                        resultMap[kvp.Key] = kvp.Value;
+                    }
+
+                    trimmedMap1.Free();
+                    trimmedMap2.Free();
+                    trimmedMergedMap.Free();
+                }
+
+                Debug.Assert(Compare(map1, resultMap) <= 0);
+                Debug.Assert(Compare(map2, resultMap) <= 0);
+                AssertValidAnalysisData(resultMap);
+
+                return resultMap;
+            }
+            finally
+            {
+                keysToMerge.Free();
+                fieldOrPropertySymbolsToMerge.Free();
+            }
+        }
+
+        private static bool IsAnalysisEntityForFieldOrProperty(AnalysisEntity entity)
+            => entity.SymbolOpt?.Kind == SymbolKind.Field || entity.SymbolOpt?.Kind == SymbolKind.Property;
+
+        private static PooledDictionary<AnalysisEntity, TValue> GetTrimmedMapForFieldOrPropertyEntities(
+            DictionaryAnalysisData<AnalysisEntity, TValue> map,
+            PooledHashSet<ISymbol> fieldOrPropertySymbolsToMerge)
+        {
+            var entriesForFieldOrPropertyEntities = map.Where(kvp => IsAnalysisEntityForFieldOrProperty(kvp.Key) &&
+                                                                     fieldOrPropertySymbolsToMerge.Contains(kvp.Key.SymbolOpt));
+            return PooledDictionary<AnalysisEntity, TValue>.GetInstance(entriesForFieldOrPropertyEntities);
+        }
+        private PooledDictionary<AnalysisEntity, TValue> MergeForFieldOrPropertyEntities(IDictionary<AnalysisEntity, TValue> map1, IDictionary<AnalysisEntity, TValue> map2)
+        {
+            Debug.Assert(map1.Keys.All(IsAnalysisEntityForFieldOrProperty));
+            Debug.Assert(map2.Keys.All(IsAnalysisEntityForFieldOrProperty));
+
+            var resultMap = PooledDictionary<AnalysisEntity, TValue>.GetInstance();
             var newKeys = PooledHashSet<AnalysisEntity>.GetInstance();
 
-            var map2LookupIgnoringInstanceLocation = map2.Keys.Where(IsAnalysisEntityForFieldOrProperty)
-                                                              .ToLookup(entity => entity.EqualsIgnoringInstanceLocationId);
+            var map2LookupIgnoringInstanceLocation = map2.Keys.ToLookup(entity => entity.EqualsIgnoringInstanceLocationId);
             foreach (var entry1 in map1)
             {
                 AnalysisEntity key1 = entry1.Key;
@@ -178,15 +259,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             }
 
             newKeys.Free();
-
-            Debug.Assert(Compare(map1, resultMap) <= 0);
-            Debug.Assert(Compare(map2, resultMap) <= 0);
-            AssertValidAnalysisData(resultMap);
-
             return resultMap;
-
-            bool IsAnalysisEntityForFieldOrProperty(AnalysisEntity entity)
-                => entity.SymbolOpt?.Kind == SymbolKind.Field || entity.SymbolOpt?.Kind == SymbolKind.Property;
         }
     }
 }

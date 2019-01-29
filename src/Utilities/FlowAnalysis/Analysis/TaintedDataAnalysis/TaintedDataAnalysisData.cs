@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow;
 
 namespace Analyzer.Utilities.FlowAnalysis.Analysis.TaintedDataAnalysis
@@ -12,7 +13,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.TaintedDataAnalysis
         {
         }
 
-        public TaintedDataAnalysisData(IDictionary<AnalysisEntity, TaintedDataAbstractValue> fromData)
+        public TaintedDataAnalysisData(ImmutableDictionary<AnalysisEntity, TaintedDataAbstractValue> fromData)
             : base(fromData)
         {
         }

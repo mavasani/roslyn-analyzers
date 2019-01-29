@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 {
@@ -18,7 +19,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
         {
         }
 
-        public ValueContentAnalysisData(IDictionary<AnalysisEntity, ValueContentAbstractValue> fromData)
+        public ValueContentAnalysisData(ImmutableDictionary<AnalysisEntity, ValueContentAbstractValue> fromData)
             : base(fromData)
         {
         }

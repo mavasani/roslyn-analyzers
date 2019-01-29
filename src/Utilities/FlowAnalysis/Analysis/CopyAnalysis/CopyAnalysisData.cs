@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
@@ -20,7 +21,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.CopyAnalysis
         {
         }
 
-        public CopyAnalysisData(IDictionary<AnalysisEntity, CopyAbstractValue> fromData)
+        public CopyAnalysisData(ImmutableDictionary<AnalysisEntity, CopyAbstractValue> fromData)
             : base(fromData)
         {
             AssertValidCopyAnalysisData();

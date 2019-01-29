@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 
 #pragma warning disable CA1710 // Rename Microsoft.CodeAnalysis.ArrayBuilder<T> to end in 'Collection'.
 #pragma warning disable CA1000 // Do not declare static members on generic types
@@ -358,6 +359,24 @@ namespace Microsoft.CodeAnalysis
             for (int i = 0; i < capacity; i++)
             {
                 builder.Add(fillWithValue);
+            }
+
+            return builder;
+        }
+
+        public static ArrayBuilder<T> GetInstance(IEnumerable<T> initializer)
+        {
+            var builder = GetInstance();
+
+            if (initializer != null)
+            {
+                var count = initializer.Count();
+                builder.EnsureCapacity(count);
+
+                foreach (var value in initializer)
+                {
+                    builder.Add(value);
+                }
             }
 
             return builder;

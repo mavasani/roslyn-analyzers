@@ -16,6 +16,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
     /// on the control flow paths where the corresonding <see cref="AnalysisEntity"/> is known to have <code>true</code> or <code>false</code> value respectively.
     /// </summary>
     internal abstract partial class PredicatedAnalysisData<TKey, TValue> : AbstractAnalysisData
+        where TKey: IEquatable<TKey>
     {
         private DictionaryAnalysisData<AnalysisEntity, PerEntityPredicatedAnalysisData> _lazyPredicateDataMap;
 

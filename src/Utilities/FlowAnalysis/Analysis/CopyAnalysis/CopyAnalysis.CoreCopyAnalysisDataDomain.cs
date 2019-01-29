@@ -30,37 +30,60 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.CopyAnalysis
                 CopyAnalysisData.AssertValidCopyAnalysisData(map1);
                 CopyAnalysisData.AssertValidCopyAnalysisData(map2);
 
-                var result = new DictionaryAnalysisData<AnalysisEntity, CopyAbstractValue>();
-                foreach (var kvp in map1)
+                var result = new DictionaryAnalysisData<AnalysisEntity, CopyAbstractValue>(map1);
+
+                var keysToMerge = map1.GetKeysToMerge(map2);
+                try
                 {
-                    var key = kvp.Key;
-                    var value1 = kvp.Value;
-
-                    // If the key exists in both maps, use the merged value.
-                    // Otherwise, use the default value.
-                    CopyAbstractValue mergedValue;
-                    if (map2.TryGetValue(key, out var value2))
+                    foreach (var key in keysToMerge)
                     {
-                        mergedValue = ValueDomain.Merge(value1, value2);
-                    }
-                    else
-                    {
-                        mergedValue = _getDefaultCopyValue(key);
+                        // If the key exists in both maps, use the merged value.
+                        // Otherwise, use the default value.
+                        CopyAbstractValue mergedValue;
+                        var map1HasValue = map1.TryGetValue(key, out var value1);
+                        var map2HasValue = map2.TryGetValue(key, out var value2);
+                        if (map1HasValue && map2HasValue)
+                        {
+                            mergedValue = ValueDomain.Merge(value1, value2);
+                        }
+                        else if (map1HasValue || map2HasValue)
+                        {
+                            mergedValue = _getDefaultCopyValue(key);
+                        }
+                        else
+                        {
+                            continue;
+                        }
+
+                        result[key] = mergedValue;
                     }
 
-                    result.Add(key, mergedValue);
+                    // Update original entries from map1 where copy values differ in map2.
+                    foreach (var kvp in map1)
+                    {
+                        var key = kvp.Key;
+                        if (keysToMerge.Contains(key))
+                        {
+                            continue;
+                        }
+
+                        if (!map2.TryGetValue(key, out var value2))
+                        {
+                            result[key] = _getDefaultCopyValue(key);
+                        }
+                        else if (!value2.Equals(kvp.Value))
+                        {
+                            result.Remove(key);
+                        }
+                    }
+
+                    CopyAnalysisData.AssertValidCopyAnalysisData(result);
+                    return result;
                 }
-
-                foreach (var kvp in map2)
+                finally
                 {
-                    if (!result.ContainsKey(kvp.Key))
-                    {
-                        result.Add(kvp.Key, _getDefaultCopyValue(kvp.Key));
-                    }
+                    keysToMerge.Free();
                 }
-
-                CopyAnalysisData.AssertValidCopyAnalysisData(result);
-                return result;
             }
         }
     }

@@ -201,7 +201,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.DisposeAnalysis
             protected override DisposeAnalysisData MergeAnalysisData(DisposeAnalysisData value1, DisposeAnalysisData value2)
                 => DisposeAnalysisDomainInstance.Merge(value1, value2);
             protected override DisposeAnalysisData GetClonedAnalysisData(DisposeAnalysisData analysisData)
-                => GetClonedAnalysisDataHelper(CurrentAnalysisData);
+                => GetClonedAnalysisDataHelper(analysisData);
             public override DisposeAnalysisData GetEmptyAnalysisData()
                 => GetEmptyAnalysisDataHelper();
             protected override DisposeAnalysisData GetExitBlockOutputData(DisposeAnalysisResult analysisResult)

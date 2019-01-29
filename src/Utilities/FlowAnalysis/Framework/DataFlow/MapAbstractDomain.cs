@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -9,6 +10,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
     /// An abstract domain implementation for analyses that store dictionary typed data.
     /// </summary>
     internal class MapAbstractDomain<TKey, TValue> : AbstractAnalysisDomain<DictionaryAnalysisData<TKey, TValue>>
+        where TKey: IEquatable<TKey>
     {
         public MapAbstractDomain(AbstractValueDomain<TValue> valueDomain)
         {
@@ -88,34 +90,38 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         }
 #pragma warning restore CA1030 // Use events where appropriate
 
-        public override DictionaryAnalysisData<TKey, TValue> Merge(DictionaryAnalysisData<TKey, TValue> value1, DictionaryAnalysisData<TKey, TValue> value2)
+        public override DictionaryAnalysisData<TKey, TValue> Merge(DictionaryAnalysisData<TKey, TValue> map1, DictionaryAnalysisData<TKey, TValue> map2)
         {
-            Debug.Assert(value1 != null);
-            Debug.Assert(value2 != null);
+            Debug.Assert(map1 != null);
+            Debug.Assert(map2 != null);
 
-            var result = new DictionaryAnalysisData<TKey, TValue>(value1);
-            foreach (var entry in value2)
+            var result = new DictionaryAnalysisData<TKey, TValue>(map1);
+            var keysToMerge = map1.GetKeysToMerge(map2);
+            try
             {
-                if (result.TryGetValue(entry.Key, out TValue value))
+                foreach (var key in keysToMerge)
                 {
-                    value = ValueDomain.Merge(value, entry.Value);
+                    if (map1.TryGetValue(key, out var value1))
+                    {
+                        if (map2.TryGetValue(key, out var value2))
+                        {
+                            result[key] = ValueDomain.Merge(value1, value2);
+                        }
+                    }
+                    else if (map2.TryGetValue(key, out var value2))
+                    {
+                        result[key] = value2;
+                    }
+                }
 
-                    if (value != null)
-                    {
-                        result[entry.Key] = value;
-                    }
-                    else
-                    {
-                        result.Remove(entry.Key);
-                    }
-                }
-                else
-                {
-                    result.Add(entry.Key, entry.Value);
-                }
+                Debug.Assert(Compare(map1, result) <= 0);
+                Debug.Assert(Compare(map2, result) <= 0);
+                return result;
             }
-
-            return result;
+            finally
+            {
+                keysToMerge.Free();
+            }
         }
     }
 }
