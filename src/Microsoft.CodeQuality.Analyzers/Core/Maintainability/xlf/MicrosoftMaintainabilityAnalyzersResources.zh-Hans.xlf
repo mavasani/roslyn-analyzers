@@ -82,6 +82,16 @@
         <target state="translated">避免使用无法维护的代码</target>
         <note />
       </trans-unit>
+      <trans-unit id="FlightEnabledMessage">
+        <source>Method '{0}', enable flights at invocations and property accesses: '{1}'</source>
+        <target state="new">Method '{0}', enable flights at invocations and property accesses: '{1}'</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="FlightEnabledTitle">
+        <source>FlightEnabled title</source>
+        <target state="new">FlightEnabled title</target>
+        <note />
+      </trans-unit>
       <trans-unit id="InvalidEntryInCodeMetricsConfigFileDescription">
         <source>Invalid entry in code metrics rule specification file</source>
         <target state="translated">代码度量规则规范文件中的条目无效</target>

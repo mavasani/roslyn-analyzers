@@ -81,6 +81,16 @@
         <target state="translated">避免無法維護的程式碼</target>
         <note />
       </trans-unit>
+      <trans-unit id="FlightEnabledMessage">
+        <source>Method '{0}', enable flights at invocations and property accesses: '{1}'</source>
+        <target state="new">Method '{0}', enable flights at invocations and property accesses: '{1}'</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="FlightEnabledTitle">
+        <source>FlightEnabled title</source>
+        <target state="new">FlightEnabled title</target>
+        <note />
+      </trans-unit>
       <trans-unit id="InvalidEntryInCodeMetricsConfigFileDescription">
         <source>Invalid entry in code metrics rule specification file</source>
         <target state="translated">程式碼度量規則規格檔案中的項目無效</target>

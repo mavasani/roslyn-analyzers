@@ -82,6 +82,16 @@ Ein niedriger Wartbarkeitsindex deutet darauf hin, dass der Code wahrscheinlich 
         <target state="translated">Nicht wartbaren Code vermeiden</target>
         <note />
       </trans-unit>
+      <trans-unit id="FlightEnabledMessage">
+        <source>Method '{0}', enable flights at invocations and property accesses: '{1}'</source>
+        <target state="new">Method '{0}', enable flights at invocations and property accesses: '{1}'</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="FlightEnabledTitle">
+        <source>FlightEnabled title</source>
+        <target state="new">FlightEnabled title</target>
+        <note />
+      </trans-unit>
       <trans-unit id="InvalidEntryInCodeMetricsConfigFileDescription">
         <source>Invalid entry in code metrics rule specification file</source>
         <target state="translated">Ungültiger Eintrag in der Datei zur Spezifikation von Regeln für Codemteriken.</target>

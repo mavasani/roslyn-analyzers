@@ -82,6 +82,16 @@ Un índice de mantenibilidad bajo indica que el código es probablemente difíci
         <target state="translated">Evite código que no se puede mantener</target>
         <note />
       </trans-unit>
+      <trans-unit id="FlightEnabledMessage">
+        <source>Method '{0}', enable flights at invocations and property accesses: '{1}'</source>
+        <target state="new">Method '{0}', enable flights at invocations and property accesses: '{1}'</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="FlightEnabledTitle">
+        <source>FlightEnabled title</source>
+        <target state="new">FlightEnabled title</target>
+        <note />
+      </trans-unit>
       <trans-unit id="InvalidEntryInCodeMetricsConfigFileDescription">
         <source>Invalid entry in code metrics rule specification file</source>
         <target state="translated">Entrada no válida en el archivo de especificación de regla de métricas de código</target>

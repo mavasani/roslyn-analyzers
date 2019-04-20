@@ -82,6 +82,16 @@
         <target state="translated">유지 관리할 수 없는 코드는 사용하지 마십시오.</target>
         <note />
       </trans-unit>
+      <trans-unit id="FlightEnabledMessage">
+        <source>Method '{0}', enable flights at invocations and property accesses: '{1}'</source>
+        <target state="new">Method '{0}', enable flights at invocations and property accesses: '{1}'</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="FlightEnabledTitle">
+        <source>FlightEnabled title</source>
+        <target state="new">FlightEnabled title</target>
+        <note />
+      </trans-unit>
       <trans-unit id="InvalidEntryInCodeMetricsConfigFileDescription">
         <source>Invalid entry in code metrics rule specification file</source>
         <target state="translated">코드 메트릭 규칙 사양 파일의 잘못된 항목</target>
