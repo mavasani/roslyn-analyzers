@@ -58,11 +58,15 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.FlightEnabledAnalysis
                 {
                     return FlightEnabledAbstractValue.Unknown;
                 }
+                else if (value1.Kind == FlightEnabledAbstractValueKind.Empty && value2.Kind == FlightEnabledAbstractValueKind.Empty)
+                {
+                    return FlightEnabledAbstractValue.Empty;
+                }
 
                 var enabledFlights = _enabledFlightsDomain.Intersect(value1.EnabledFlights, value2.EnabledFlights);
                 if (enabledFlights.IsEmpty)
                 {
-                    return FlightEnabledAbstractValue.Empty;
+                    return FlightEnabledAbstractValue.Unknown;
                 }
 
                 return new FlightEnabledAbstractValue(enabledFlights);

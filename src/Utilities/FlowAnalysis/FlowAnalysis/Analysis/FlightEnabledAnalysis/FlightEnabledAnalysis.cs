@@ -7,6 +7,7 @@ using System.Threading;
 using Analyzer.Utilities;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.FlightEnabledAnalysis
 {
@@ -40,6 +41,10 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.FlightEnabledAnalysis
         {
             var interproceduralAnalysisConfig = InterproceduralAnalysisConfiguration.Create(
                 analyzerOptions, rule, interproceduralAnalysisKind, cancellationToken);
+            interproceduralAnalysisPredicateOpt ??= new InterproceduralAnalysisPredicate(
+                skipAnalysisForInvokedMethodPredicateOpt: IsFlightEnablingMethod,
+                skipAnalysisForInvokedLambdaOrLocalFunctionPredicateOpt: null,
+                skipAnalysisForInvokedContextPredicateOpt: null);
             return GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider,
                 interproceduralAnalysisConfig, interproceduralAnalysisPredicateOpt, pessimisticAnalysis,
                 performCopyAnalysis: analyzerOptions.GetCopyAnalysisOption(rule, defaultValue: performCopyAnalysisIfNotUserConfigured, cancellationToken),
@@ -80,9 +85,16 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.FlightEnabledAnalysis
         }
 
         protected override FlightEnabledAnalysisResult ToResult(FlightEnabledAnalysisContext analysisContext, DataFlowAnalysisResult<FlightEnabledBlockAnalysisResult, FlightEnabledAbstractValue> dataFlowAnalysisResult)
-            => new FlightEnabledAnalysisResult(dataFlowAnalysisResult, ((FlightEnabledDataFlowOperationVisitor)OperationVisitor).EnabledFlightsForInvocationsAndPropertyAccesses);
+            => new FlightEnabledAnalysisResult(dataFlowAnalysisResult, ((FlightEnabledDataFlowOperationVisitor)OperationVisitor).EnabledFlightsForInvocationsAndPropertyAccessesOpt);
 
         protected override FlightEnabledBlockAnalysisResult ToBlockResult(BasicBlock basicBlock, FlightEnabledAnalysisData data)
             => new FlightEnabledBlockAnalysisResult(basicBlock, data);
+
+        public static bool IsFlightEnablingMethod(IMethodSymbol method)
+            => method.Name.Equals("IsFlightEnabled", StringComparison.Ordinal) &&
+                method.ContainingType.Name.Equals("FlightApi", StringComparison.Ordinal) &&
+                method.ReturnType.SpecialType == SpecialType.System_Boolean &&
+                method.Parameters.Length == 1 &&
+                method.Parameters[0].Type.SpecialType == SpecialType.System_String;
     }
 }

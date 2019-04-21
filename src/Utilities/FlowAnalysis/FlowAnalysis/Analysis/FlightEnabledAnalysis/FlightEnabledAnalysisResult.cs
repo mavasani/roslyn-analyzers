@@ -12,13 +12,12 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.FlightEnabledAnalysis
     {
         internal FlightEnabledAnalysisResult(
             DataFlowAnalysisResult<FlightEnabledBlockAnalysisResult, FlightEnabledAbstractValue> coreFlightEnabledAnalysisResult,
-            ImmutableHashSet<string> enabledFlightsForInvocationsAndPropertyAccesses)
+            ImmutableHashSet<string> enabledFlightsForInvocationsAndPropertyAccessesOpt)
             : base(coreFlightEnabledAnalysisResult)
         {
-            Debug.Assert(enabledFlightsForInvocationsAndPropertyAccesses != null);
-            EnabledFlightsForInvocationsAndPropertyAccesses = enabledFlightsForInvocationsAndPropertyAccesses;
+            EnabledFlightsForInvocationsAndPropertyAccessesOpt = enabledFlightsForInvocationsAndPropertyAccessesOpt;
         }
 
-        public ImmutableHashSet<string> EnabledFlightsForInvocationsAndPropertyAccesses { get; }
+        public ImmutableHashSet<string> EnabledFlightsForInvocationsAndPropertyAccessesOpt { get; }
     }
 }

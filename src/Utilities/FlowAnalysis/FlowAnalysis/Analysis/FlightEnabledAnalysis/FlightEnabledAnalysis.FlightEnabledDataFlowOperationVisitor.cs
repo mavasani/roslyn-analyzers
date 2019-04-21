@@ -29,12 +29,12 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.FlightEnabledAnalysis
                 _globalEntity = GetGlobalEntity(analysisContext);
             }
 
-            public ImmutableHashSet<string> EnabledFlightsForInvocationsAndPropertyAccesses
-                => _lazyEnabledFlightsForInvocationsAndPropertyAccesses?.ToImmutableHashSet() ?? ImmutableHashSet<string>.Empty;
+            public ImmutableHashSet<string> EnabledFlightsForInvocationsAndPropertyAccessesOpt
+                => _lazyEnabledFlightsForInvocationsAndPropertyAccesses?.ToImmutableHashSet();
 
-            private void UpdateEnabledFlightsOnInvocationOrPropertyAccess(ImmutableHashSet<string> enabledFlights = null)
+            private void UpdateEnabledFlightsOnInvocationOrPropertyAccess()
             {
-                enabledFlights ??= GetAbstractValue(_globalEntity).EnabledFlights;
+                var enabledFlights = GetAbstractValue(_globalEntity).EnabledFlights;
                 if (_lazyEnabledFlightsForInvocationsAndPropertyAccesses == null)
                 {
                     _lazyEnabledFlightsForInvocationsAndPropertyAccesses = new HashSet<string>(enabledFlights, StringComparer.OrdinalIgnoreCase);
@@ -85,14 +85,14 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.FlightEnabledAnalysis
 
                 if (result.isFeasibleBranch &&
                     branch.BranchValueOpt != null &&
-                    FlowBranchConditionKind != ControlFlowConditionKind.None)
+                    branch.ControlFlowConditionKind != ControlFlowConditionKind.None)
                 {
                     var branchValue = GetCachedAbstractValue(branch.BranchValueOpt);
                     if (branchValue.EnabledFlights.Count > 0)
                     {
                         var currentGlobalValue = GetAbstractValue(_globalEntity);
                         var newEnabledFlights = branchValue.EnabledFlights
-                            .Select(enabledFlight => FlowBranchConditionKind == ControlFlowConditionKind.WhenTrue ?
+                            .Select(enabledFlight => branch.ControlFlowConditionKind == ControlFlowConditionKind.WhenTrue ?
                                                      enabledFlight.ToLower() :
                                                      enabledFlight.ToUpper());
                         var newGlobalValue = new FlightEnabledAbstractValue(currentGlobalValue.EnabledFlights.Union(newEnabledFlights));
@@ -165,14 +165,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.FlightEnabledAnalysis
 
             public override FlightEnabledAbstractValue VisitInvocation_NonLambdaOrDelegateOrLocalFunction(IMethodSymbol method, IOperation visitedInstance, ImmutableArray<IArgumentOperation> visitedArguments, bool invokedAsDelegate, IOperation originalOperation, FlightEnabledAbstractValue defaultValue)
             {
-                bool isFlightEnablingInvocation =
-                    method.Name.Equals("IsFlightEnabled", StringComparison.Ordinal) &&
-                    method.ContainingType.Name.Equals("FlightApi", StringComparison.Ordinal) &&
-                    method.ReturnType.SpecialType == SpecialType.System_Boolean &&
-                    method.Parameters.Length == 1 &&
-                    method.Parameters[0].Type.SpecialType == SpecialType.System_String &&
-                    visitedArguments.Length == 1;
-
+                bool isFlightEnablingInvocation = IsFlightEnablingMethod(method);
                 if (!isFlightEnablingInvocation)
                 {
                     UpdateEnabledFlightsOnInvocationOrPropertyAccess();
@@ -180,23 +173,18 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.FlightEnabledAnalysis
 
                 var value = base.VisitInvocation_NonLambdaOrDelegateOrLocalFunction(method, visitedInstance, visitedArguments, invokedAsDelegate, originalOperation, defaultValue);
 
-                if (TryGetInterproceduralAnalysisResult(originalOperation, out var interproceduralAnalysisResult))
-                {
-                    UpdateEnabledFlightsOnInvocationOrPropertyAccess(interproceduralAnalysisResult.EnabledFlightsForInvocationsAndPropertyAccesses);
-                }
-
                 if (isFlightEnablingInvocation)
                 {
-                    var argumentValue = DataFlowAnalysisContext.ValueContentAnalysisResult[visitedArguments[0]];
-                    if (argumentValue.IsLiteralState &&
-                        argumentValue.LiteralValues.Count == 1 &&
-                        argumentValue.LiteralValues.Single() is string enabledFlight)
+                    value = FlightEnabledAbstractValue.Unknown;
+                    if (visitedArguments.Length == 1)
                     {
-                        value = new FlightEnabledAbstractValue(enabledFlight);
-                    }
-                    else
-                    {
-                        value = FlightEnabledAbstractValue.Unknown;
+                        var argumentValue = DataFlowAnalysisContext.ValueContentAnalysisResult[visitedArguments[0]];
+                        if (argumentValue.IsLiteralState &&
+                            argumentValue.LiteralValues.Count == 1 &&
+                            argumentValue.LiteralValues.Single() is string enabledFlight)
+                        {
+                            value = new FlightEnabledAbstractValue(enabledFlight);
+                        }
                     }
                 }
 

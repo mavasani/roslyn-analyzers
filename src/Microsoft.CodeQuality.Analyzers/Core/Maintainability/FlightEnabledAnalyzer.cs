@@ -46,7 +46,12 @@ namespace Microsoft.CodeQuality.Analyzers.Maintainability
                 compilationContext.RegisterOperationBlockAction(operationBlockContext =>
                 {
                     var owningSymbol = operationBlockContext.OwningSymbol;
-                    var processedOperationRoots = new HashSet<IOperation>();
+
+                    if (owningSymbol is IMethodSymbol method &&
+                        FlightEnabledAnalysis.IsFlightEnablingMethod(method))
+                    {
+                        return;
+                    }
 
                     foreach (var operationRoot in operationBlockContext.OperationBlocks)
                     {
@@ -62,7 +67,8 @@ namespace Microsoft.CodeQuality.Analyzers.Maintainability
 
                         // Method '{0}', enable flights at invocations and property accesses: '{1}'
                         var arg1 = owningSymbol.ToString();
-                        var arg2 = string.Join(", ", flightEnabledResult.EnabledFlightsForInvocationsAndPropertyAccesses.Order());
+                        var enabledFlights = flightEnabledResult.EnabledFlightsForInvocationsAndPropertyAccessesOpt ?? ImmutableHashSet<string>.Empty;
+                        var arg2 = string.Join(", ", enabledFlights.Order());
                         operationBlockContext.ReportDiagnostic(owningSymbol.CreateDiagnostic(Rule, arg1, arg2));
                     }
                 });
