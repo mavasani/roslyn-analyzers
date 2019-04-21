@@ -17,8 +17,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\CopyAnalysis\SetCopyAbstractValuePredicateKind.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\FlightEnabledAnalysis\FlightEnabledAnalysisResult.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\FlightEnabledAnalysis\FlightEnabledAbstractValueKind.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\FlightEnabledAnalysis\FlightEnabledAnalysisData.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\FlightEnabledAnalysis\FlightEnabledAnalysisDomain.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\FlightEnabledAnalysis\FlightEnabledAbstractValue.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\FlightEnabledAnalysis\FlightEnabledAnalysis.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\FlightEnabledAnalysis\FlightEnabledAnalysis.FlightEnabledAbstractValueDomain.cs" />

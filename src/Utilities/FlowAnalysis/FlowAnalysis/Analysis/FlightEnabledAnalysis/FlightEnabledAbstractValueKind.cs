@@ -4,8 +4,19 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.FlightEnabledAnalysis
 {
     internal enum FlightEnabledAbstractValueKind
     {
+        /// <summary>
+        /// No flights enabled.
+        /// </summary>
         Empty,
+
+        /// <summary>
+        /// One or more known set of flights enabled.
+        /// </summary>
         Known,
+
+        /// <summary>
+        /// Unknown set of flights enabled.
+        /// </summary>
         Unknown
     }
 }
