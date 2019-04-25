@@ -82,7 +82,7 @@ namespace Microsoft.CodeQuality.Analyzers.Maintainability
                             var valueContentAnalysisResult = ValueContentAnalysis.GetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider,
                                     operationBlockContext.Options, AlwaysTrueFalseOrNullRule, operationBlockContext.CancellationToken,
                                     out var copyAnalysisResultOpt, out var pointsToAnalysisResult,
-                                    performCopyAnalysisIfNotUserConfigured: false); // TODO: Enable copy analysis by default.
+                                    performCopyAnalysisIfNotUserConfigured: false, interproceduralAnalysisKind: InterproceduralAnalysisKind.ContextSensitive); // TODO: Enable copy analysis by default.
 
                             Debug.Assert(pointsToAnalysisResult != null);
 

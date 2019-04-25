@@ -2457,5 +2457,56 @@ Enum SyntaxKind
 End Enum
 ");
         }
+
+        [Trait(Traits.DataflowAnalysis, Traits.Dataflow.ValueContentAnalysis)]
+        [Fact]
+        public void TempTest()
+        {
+            VerifyCSharp(@"
+using System;
+using System.Collections;
+class TestClass
+{
+    void TestMethod()
+    {
+        TestTypeToTrackWithConstructor t = GetTestType();
+        t?.Method();
+    }
+
+    TestTypeToTrackWithConstructor GetTestType()
+    {
+        return new TestTypeToTrackWithConstructor(default(TestEnum), null, ""A string"");
+    }
+}" + TestTypeToTrackSource);
+        }
+
+        private readonly string TestTypeToTrackSource = @"
+public class TestTypeToTrack
+{
+    public TestEnum AnEnum { get; set; }
+    public object AnObject { get; set; }
+    public string AString { get; set; }
+    public void Method()
+    {
+    }
+}
+public class TestTypeToTrackWithConstructor : TestTypeToTrack
+{
+    private TestTypeToTrackWithConstructor()
+    {
+    }
+    public TestTypeToTrackWithConstructor(TestEnum enu, object obj, string str)
+    {
+        this.AnEnum = enu;
+        this.AnObject = obj;
+        this.AString = str;
+    }
+}
+public enum TestEnum
+{
+    Value0,
+    Value1,
+    Value2,
+}";
     }
 }
