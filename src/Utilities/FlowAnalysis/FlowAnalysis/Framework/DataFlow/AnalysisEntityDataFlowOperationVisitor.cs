@@ -435,7 +435,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
 
             if (predicateOpt == null)
             {
-                predicateOpt = entity => IsChildAnalysisEntity(entity, instanceLocationOpt);
+                predicateOpt = entity => IsChildAnalysisEntity(entity, instanceLocationOpt.MakeNonNull());
             }
 
             return GetChildAnalysisEntities(predicateOpt);
@@ -444,8 +444,8 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         protected static bool IsChildAnalysisEntity(AnalysisEntity entity, PointsToAbstractValue instanceLocation)
         {
             return instanceLocation != PointsToAbstractValue.NoLocation &&
-                entity.InstanceLocation.Equals(instanceLocation) &&
-                entity.IsChildOrInstanceMember;
+                entity.IsChildOrInstanceMember &&
+                entity.InstanceLocation.Equals(instanceLocation.MakeNonNull());
         }
 
         private ImmutableHashSet<AnalysisEntity> GetChildAnalysisEntities(Func<AnalysisEntity, bool> predicate)

@@ -50,6 +50,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             Debug.Assert(!indices.IsDefault);
             Debug.Assert(symbolOpt != null || !indices.IsEmpty || instanceReferenceOperationSyntaxOpt != null || captureIdOpt.HasValue);
             Debug.Assert(location != null);
+            Debug.Assert(!location.HasNullLocation);
             Debug.Assert(type != null);
             Debug.Assert(parentOpt == null || parentOpt.Type.HasValueCopySemantics() || !indices.IsEmpty);
 
@@ -96,6 +97,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         {
             Debug.Assert(symbolOpt != null || !indices.IsEmpty);
             Debug.Assert(instanceLocation != null);
+            Debug.Assert(!instanceLocation.HasNullLocation);
             Debug.Assert(type != null);
             Debug.Assert(parentOpt == null || parentOpt.InstanceLocation == instanceLocation);
 
@@ -106,6 +108,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         {
             Debug.Assert(instanceReferenceOperation != null);
             Debug.Assert(instanceLocation != null);
+            Debug.Assert(!instanceLocation.HasNullLocation);
 
             return new AnalysisEntity(instanceReferenceOperation, instanceLocation);
         }
@@ -122,6 +125,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         {
             Debug.Assert(typeSymbol != null);
             Debug.Assert(instanceLocation != null);
+            Debug.Assert(!instanceLocation.HasNullLocation);
             Debug.Assert(instanceLocation.Locations.Count == 1);
             Debug.Assert(instanceLocation.Locations.Single().CreationOpt == null);
             Debug.Assert(Equals(instanceLocation.Locations.Single().SymbolOpt, typeSymbol));
@@ -135,7 +139,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             Debug.Assert(EqualsIgnoringInstanceLocation(analysisEntityToMerge));
             Debug.Assert(!InstanceLocation.Equals(analysisEntityToMerge.InstanceLocation));
 
-            var mergedInstanceLocation = PointsToAnalysis.PointsToAnalysis.PointsToAbstractValueDomainInstance.Merge(InstanceLocation, analysisEntityToMerge.InstanceLocation);
+            var mergedInstanceLocation = PointsToAnalysis.PointsToAnalysis.PointsToAbstractValueDomainInstance.Merge(InstanceLocation, analysisEntityToMerge.InstanceLocation).MakeNonNull();
             return new AnalysisEntity(SymbolOpt, Indices, InstanceReferenceOperationSyntaxOpt, CaptureIdOpt, mergedInstanceLocation, Type, ParentOpt, IsThisOrMeInstance);
         }
 

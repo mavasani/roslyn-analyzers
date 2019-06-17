@@ -186,6 +186,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis
         public ImmutableHashSet<IOperation> LValueCapturedOperations { get; }
         public PointsToAbstractValueKind Kind { get; }
         public NullAbstractValue NullState { get; }
+        internal bool HasNullLocation => NullState == NullAbstractValue.Null || NullState == NullAbstractValue.MaybeNull;
 
         protected override void ComputeHashCodeParts(ArrayBuilder<int> builder)
         {

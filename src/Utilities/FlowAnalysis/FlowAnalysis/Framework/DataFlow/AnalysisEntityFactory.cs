@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using Analyzer.Utilities.Extensions;
 using Analyzer.Utilities.PooledObjects;
+using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.CopyAnalysis;
 using Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis;
 using Microsoft.CodeAnalysis.Operations;
 
@@ -24,6 +25,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         private readonly Dictionary<IOperation, AnalysisEntity> _analysisEntityMap;
         private readonly Dictionary<ITupleOperation, ImmutableArray<AnalysisEntity>> _tupleElementEntitiesMap;
         private readonly Dictionary<CaptureId, AnalysisEntity> _captureIdEntityMap;
+        private readonly Dictionary<CaptureId, CopyAbstractValue> _captureIdCopyValueMap;
         private readonly Dictionary<ISymbol, PointsToAbstractValue> _instanceLocationsForSymbols;
         private readonly Func<IOperation, PointsToAbstractValue> _getPointsToAbstractValueOpt;
         private readonly Func<bool> _getIsInsideAnonymousObjectInitializer;
@@ -60,6 +62,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             _analysisEntityMap = new Dictionary<IOperation, AnalysisEntity>();
             _tupleElementEntitiesMap = new Dictionary<ITupleOperation, ImmutableArray<AnalysisEntity>>();
             _captureIdEntityMap = new Dictionary<CaptureId, AnalysisEntity>();
+            _captureIdCopyValueMap = new Dictionary<CaptureId, CopyAbstractValue>();
 
             _instanceLocationsForSymbols = new Dictionary<ISymbol, PointsToAbstractValue>();
             if (interproceduralCapturedVariablesMapOpt != null)
@@ -182,7 +185,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
                         }
                         else
                         {
-                            var instanceLocation = _getPointsToAbstractValueOpt(instanceReference);
+                            var instanceLocation = _getPointsToAbstractValueOpt(instanceReference).MakeNonNull();
                             analysisEntity = AnalysisEntity.Create(instanceReference, instanceLocation);
                         }
                     }
@@ -204,6 +207,19 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
 
                 case IFlowCaptureOperation flowCapture:
                     analysisEntity = GetOrCreateForFlowCapture(flowCapture.Id, flowCapture.Value.Type, flowCapture);
+
+                    if (!_captureIdCopyValueMap.TryGetValue(flowCapture.Id, out var copyAbstractValue))
+                    {
+                        copyAbstractValue = new CopyAbstractValue(analysisEntity);
+                    }
+
+                    if (TryCreate(flowCapture.Value, out var capturedEntity) &&
+                        !copyAbstractValue.AnalysisEntities.Contains(capturedEntity))
+                    {
+                        copyAbstractValue = new CopyAbstractValue(copyAbstractValue.AnalysisEntities.Add(capturedEntity), isReferenceCopy: capturedEntity.Type.IsReferenceType);
+                    }
+
+                    _captureIdCopyValueMap[flowCapture.Id] = copyAbstractValue;
                     break;
 
                 case IFlowCaptureReferenceOperation flowCaptureReference:
@@ -318,7 +334,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
                     return false;
                 }
 
-                PointsToAbstractValue instanceLocation = _getPointsToAbstractValueOpt(tupleOperation);
+                PointsToAbstractValue instanceLocation = _getPointsToAbstractValueOpt(tupleOperation).MakeNonNull();
                 var underlyingValueTupleType = tupleType.GetUnderlyingValueTupleTypeOrThis();
                 AnalysisEntity parentEntity = null;
                 if (tupleOperation.TryGetParentTupleOperation(out var parentTupleOperationOpt, out var elementOfParentTupleContainingTuple) &&
@@ -344,6 +360,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
                 }
 
                 Debug.Assert(parentEntity.InstanceLocation == instanceLocation);
+                Debug.Assert(!instanceLocation.HasNullLocation);
 
                 var builder = ArrayBuilder<AnalysisEntity>.GetInstance(tupleType.TupleElements.Length);
                 foreach (var field in tupleType.TupleElements)
@@ -381,6 +398,9 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
 
         public bool TryGetForFlowCapture(CaptureId captureId, out AnalysisEntity analysisEntity)
             => _captureIdEntityMap.TryGetValue(captureId, out analysisEntity);
+
+        public bool TryGetCopyValueForFlowCapture(CaptureId captureId, out CopyAbstractValue copyAbstractValue)
+            => _captureIdCopyValueMap.TryGetValue(captureId, out copyAbstractValue);
 
         public bool TryGetForInterproceduralAnalysis(IOperation operation, out AnalysisEntity analysisEntity)
             => _analysisEntityMap.TryGetValue(operation, out analysisEntity);
@@ -449,7 +469,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
                     else
                     {
                         // For value type allocations, we store the points to location.
-                        var instancePointsToValue = _getPointsToAbstractValueOpt(instanceOpt);
+                        var instancePointsToValue = _getPointsToAbstractValueOpt(instanceOpt).MakeNonNull();
                         if (!ReferenceEquals(instancePointsToValue, PointsToAbstractValue.NoLocation))
                         {
                             instanceLocationOpt = instancePointsToValue;
@@ -463,7 +483,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
                 }
                 else
                 {
-                    instanceLocationOpt = _getPointsToAbstractValueOpt(instanceOpt);
+                    instanceLocationOpt = _getPointsToAbstractValueOpt(instanceOpt).MakeNonNull();
                 }
             }
 
@@ -517,6 +537,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         {
             instanceLocationOpt = EnsureLocation(instanceLocationOpt, symbolOpt, parentOpt);
             Debug.Assert(instanceLocationOpt != null);
+            Debug.Assert(!instanceLocationOpt.HasNullLocation);
             var analysisEntity = AnalysisEntity.Create(symbolOpt, indices, type, instanceLocationOpt, parentOpt);
             return analysisEntity;
         }

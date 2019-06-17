@@ -871,6 +871,14 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         {
             if (DataFlowAnalysisContext.CopyAnalysisResultOpt == null)
             {
+                if (AnalysisEntityFactory.TryCreate(operation, out var analysisEntity) &&
+                    analysisEntity.CaptureIdOpt.HasValue &&
+                    analysisEntity.CaptureIdOpt.Value.ControlFlowGraph == DataFlowAnalysisContext.ControlFlowGraph &&
+                    AnalysisEntityFactory.TryGetCopyValueForFlowCapture(analysisEntity.CaptureIdOpt.Value.Id, out var copyValue))
+                {
+                    return copyValue;
+                }
+
                 return CopyAbstractValue.Unknown;
             }
             else
