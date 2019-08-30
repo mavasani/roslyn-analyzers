@@ -18,6 +18,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\PooledHashSetExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)CompilationDataProvider.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CodeMetrics\CodeAnalysisMetricData.AssemblyMetricData.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CodeMetrics\CodeAnalysisMetricData.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CodeMetrics\CodeAnalysisMetricData.EventMetricData.cs" />
@@ -30,10 +31,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)CodeMetrics\MetricsHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CodeMetrics\SemanticModelProvider.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CommonAccessibilityUtilities.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)CompilationDataProviderFactory.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DoNotCatchGeneralUnlessRethrown.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ImmutableArrayExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\KeyValuePairExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\MethodKindEx.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Extensions\IMethodSymbolExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)DisposeMethodKind.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\OperationBlockAnalysisContextExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\WellKnownDiagnosticTagsExtensions.cs" />
@@ -51,7 +54,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\IDictionaryExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\IEnumerableExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\IEnumerableOfIMethodSymbolExtensions.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Extensions\IMethodSymbolExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\INamedTypeSymbolExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\IOperationExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Extensions\ISymbolExtensions.cs" />

@@ -53,6 +53,7 @@ namespace Microsoft.NetCore.Analyzers.Data
                     return;
                 }
 
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationContext);
                 compilationContext.RegisterOperationBlockStartAction(operationBlockStartContext =>
                 {
                     ISymbol symbol = operationBlockStartContext.OwningSymbol;
@@ -80,7 +81,7 @@ namespace Microsoft.NetCore.Analyzers.Data
                     operationBlockStartContext.RegisterOperationAction(operationContext =>
                     {
                         var creation = (IObjectCreationOperation)operationContext.Operation;
-                        AnalyzeMethodCall(operationContext, creation.Constructor, symbol, creation.Arguments, creation.Syntax, isInDbCommandConstructor, isInDataAdapterConstructor, iDbCommandType, iDataAdapterType);
+                        AnalyzeMethodCall(compilationDataProvider, operationContext, creation.Constructor, symbol, creation.Arguments, creation.Syntax, isInDbCommandConstructor, isInDataAdapterConstructor, iDbCommandType, iDataAdapterType);
                     }, OperationKind.ObjectCreation);
 
                     // If an object calls a constructor in a base class or the same class, this will get called.
@@ -101,7 +102,7 @@ namespace Microsoft.NetCore.Analyzers.Data
                             return;
                         }
 
-                        AnalyzeMethodCall(operationContext, invocation.TargetMethod, symbol, invocation.Arguments, invocation.Syntax, isInDbCommandConstructor, isInDataAdapterConstructor, iDbCommandType, iDataAdapterType);
+                        AnalyzeMethodCall(compilationDataProvider, operationContext, invocation.TargetMethod, symbol, invocation.Arguments, invocation.Syntax, isInDbCommandConstructor, isInDataAdapterConstructor, iDbCommandType, iDataAdapterType);
                     }, OperationKind.Invocation);
 
                     operationBlockStartContext.RegisterOperationAction(operationContext =>
@@ -126,21 +127,23 @@ namespace Microsoft.NetCore.Analyzers.Data
                             return;
                         }
 
-                        ReportDiagnosticIfNecessary(operationContext, assignment.Value, assignment.Syntax, propertyReference.Property, symbol);
+                        ReportDiagnosticIfNecessary(compilationDataProvider, operationContext, assignment.Value, assignment.Syntax, propertyReference.Property, symbol);
                     }, OperationKind.PropertyReference);
                 });
             });
         }
 
-        private static void AnalyzeMethodCall(OperationAnalysisContext operationContext,
-                                       IMethodSymbol constructorSymbol,
-                                       ISymbol containingSymbol,
-                                       ImmutableArray<IArgumentOperation> arguments,
-                                       SyntaxNode invocationSyntax,
-                                       bool isInDbCommandConstructor,
-                                       bool isInDataAdapterConstructor,
-                                       INamedTypeSymbol iDbCommandType,
-                                       INamedTypeSymbol iDataAdapterType)
+        private static void AnalyzeMethodCall(
+            CompilationDataProvider compilationDataProvider,
+            OperationAnalysisContext operationContext,
+            IMethodSymbol constructorSymbol,
+            ISymbol containingSymbol,
+            ImmutableArray<IArgumentOperation> arguments,
+            SyntaxNode invocationSyntax,
+            bool isInDbCommandConstructor,
+            bool isInDataAdapterConstructor,
+            INamedTypeSymbol iDbCommandType,
+            INamedTypeSymbol iDataAdapterType)
         {
             CheckForDbCommandAndDataAdapterImplementation(constructorSymbol.ContainingType, iDbCommandType, iDataAdapterType,
                                                           out var callingDbCommandConstructor,
@@ -188,7 +191,7 @@ namespace Microsoft.NetCore.Analyzers.Data
                     return;
                 }
 
-                if (ReportDiagnosticIfNecessary(operationContext, argument.Value, invocationSyntax, constructorSymbol, containingSymbol))
+                if (ReportDiagnosticIfNecessary(compilationDataProvider, operationContext, argument.Value, invocationSyntax, constructorSymbol, containingSymbol))
                 {
                     // Only report one warning per invocation
                     return;
@@ -204,20 +207,22 @@ namespace Microsoft.NetCore.Analyzers.Data
                     parameter.Name.IndexOf("command", StringComparison.OrdinalIgnoreCase) != -1);
         }
 
-        private static bool ReportDiagnosticIfNecessary(OperationAnalysisContext operationContext,
-                                                 IOperation argumentValue,
-                                                 SyntaxNode syntax,
-                                                 ISymbol invokedSymbol,
-                                                 ISymbol containingMethod)
+        private static bool ReportDiagnosticIfNecessary(
+            CompilationDataProvider compilationDataProvider,
+            OperationAnalysisContext operationContext,
+            IOperation argumentValue,
+            SyntaxNode syntax,
+            ISymbol invokedSymbol,
+            ISymbol containingMethod)
         {
             if (argumentValue.Type.SpecialType != SpecialType.System_String || !argumentValue.ConstantValue.HasValue)
             {
                 // We have a candidate for diagnostic. perform more precise dataflow analysis.
-                if (argumentValue.TryGetEnclosingControlFlowGraph(out var cfg))
+                if (argumentValue.TryGetEnclosingControlFlowGraph(compilationDataProvider, out var cfg))
                 {
-                    var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(operationContext.Compilation);
+                    var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
                     var valueContentResult = ValueContentAnalysis.TryGetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider,
-                        operationContext.Options, Rule, operationContext.CancellationToken);
+                        operationContext.Options, compilationDataProvider, Rule, operationContext.CancellationToken);
                     if (valueContentResult != null)
                     {
                         ValueContentAbstractValue value = valueContentResult[argumentValue.Kind, argumentValue.Syntax];

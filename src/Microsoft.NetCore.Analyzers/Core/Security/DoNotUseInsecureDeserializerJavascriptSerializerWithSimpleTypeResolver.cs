@@ -79,7 +79,8 @@ namespace Microsoft.NetCore.Analyzers.Security
             context.RegisterCompilationStartAction(
                 (CompilationStartAnalysisContext compilationStartAnalysisContext) =>
                 {
-                    WellKnownTypeProvider wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                    CompilationDataProvider compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                    WellKnownTypeProvider wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
                     if (!wellKnownTypeProvider.TryGetTypeByMetadataName(WellKnownTypeNames.SystemWebScriptSerializationJavaScriptSerializer, out INamedTypeSymbol javaScriptSerializerSymbol)
                         || !wellKnownTypeProvider.TryGetTypeByMetadataName(WellKnownTypeNames.SystemWebScriptSerializationJavaScriptTypeResolver, out INamedTypeSymbol javaScriptTypeResolverSymbol)
                         || !wellKnownTypeProvider.TryGetTypeByMetadataName(WellKnownTypeNames.SystemWebScriptSerializationSimpleTypeResolver, out INamedTypeSymbol simpleTypeResolverSymbol))
@@ -213,7 +214,7 @@ namespace Microsoft.NetCore.Analyzers.Security
                                     }
 
                                     allResults = PropertySetAnalysis.BatchGetOrComputeHazardousUsages(
-                                        compilationAnalysisContext.Compilation,
+                                        compilationDataProvider,
                                         rootOperationsNeedingAnalysis,
                                         compilationAnalysisContext.Options,
                                         WellKnownTypeNames.SystemWebScriptSerializationJavaScriptSerializer,

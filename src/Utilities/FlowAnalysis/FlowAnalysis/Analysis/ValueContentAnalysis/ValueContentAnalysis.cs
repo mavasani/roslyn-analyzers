@@ -27,13 +27,15 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
             ISymbol owningSymbol,
             WellKnownTypeProvider wellKnownTypeProvider,
             AnalyzerOptions analyzerOptions,
+            CompilationDataProvider compilationDataProvider,
             DiagnosticDescriptor rule,
             CancellationToken cancellationToken,
             InterproceduralAnalysisKind interproceduralAnalysisKind = InterproceduralAnalysisKind.None,
             bool pessimisticAnalysis = true,
             bool performPointsToAnalysis = true)
         {
-            return TryGetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider, analyzerOptions, rule,
+            return TryGetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider,
+                analyzerOptions, compilationDataProvider, rule,
                 cancellationToken, out var _, out var _, interproceduralAnalysisKind,
                 pessimisticAnalysis, performPointsToAnalysis);
         }
@@ -43,6 +45,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
             ISymbol owningSymbol,
             WellKnownTypeProvider wellKnownTypeProvider,
             AnalyzerOptions analyzerOptions,
+            CompilationDataProvider compilationDataProvider,
             DiagnosticDescriptor rule,
             CancellationToken cancellationToken,
             out CopyAnalysisResult copyAnalysisResultOpt,
@@ -58,7 +61,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
             var interproceduralAnalysisConfig = InterproceduralAnalysisConfiguration.Create(
                 analyzerOptions, rule, interproceduralAnalysisKind, cancellationToken);
             return TryGetOrComputeResult(cfg, owningSymbol, analyzerOptions, wellKnownTypeProvider,
-                interproceduralAnalysisConfig, out copyAnalysisResultOpt,
+                compilationDataProvider, interproceduralAnalysisConfig, out copyAnalysisResultOpt,
                 out pointsToAnalysisResultOpt, pessimisticAnalysis, performPointsToAnalysis,
                 performCopyAnalysis: analyzerOptions.GetCopyAnalysisOption(rule, defaultValue: performCopyAnalysisIfNotUserConfigured, cancellationToken),
                 interproceduralAnalysisPredicateOpt: interproceduralAnalysisPredicateOpt);
@@ -69,6 +72,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
             WellKnownTypeProvider wellKnownTypeProvider,
+            CompilationDataProvider compilationDataProvider,
             InterproceduralAnalysisConfiguration interproceduralAnalysisConfig,
             out CopyAnalysisResult copyAnalysisResultOpt,
             out PointsToAnalysisResult pointsToAnalysisResultOpt,
@@ -79,8 +83,9 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
         {
             copyAnalysisResultOpt = null;
             pointsToAnalysisResultOpt = performPointsToAnalysis ?
-                PointsToAnalysis.PointsToAnalysis.TryGetOrComputeResult(cfg, owningSymbol, analyzerOptions, wellKnownTypeProvider, out copyAnalysisResultOpt,
-                    interproceduralAnalysisConfig, interproceduralAnalysisPredicateOpt, pessimisticAnalysis, performCopyAnalysis) :
+                PointsToAnalysis.PointsToAnalysis.TryGetOrComputeResult(cfg, owningSymbol, analyzerOptions, wellKnownTypeProvider,
+                    compilationDataProvider, interproceduralAnalysisConfig, interproceduralAnalysisPredicateOpt,
+                    out copyAnalysisResultOpt, pessimisticAnalysis, performCopyAnalysis) :
                 null;
 
             if (cfg == null)
@@ -91,7 +96,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ValueContentAnalysis
 
             var analysisContext = ValueContentAnalysisContext.Create(
                 ValueContentAbstractValueDomain.Default, wellKnownTypeProvider, cfg, owningSymbol, analyzerOptions,
-                interproceduralAnalysisConfig, pessimisticAnalysis, copyAnalysisResultOpt,
+                compilationDataProvider.Factory, interproceduralAnalysisConfig, pessimisticAnalysis, copyAnalysisResultOpt,
                 pointsToAnalysisResultOpt, TryGetOrComputeResultForAnalysisContext, interproceduralAnalysisPredicateOpt);
             return TryGetOrComputeResultForAnalysisContext(analysisContext);
         }

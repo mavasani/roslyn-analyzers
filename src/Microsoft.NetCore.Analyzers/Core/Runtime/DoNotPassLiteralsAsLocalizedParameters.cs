@@ -57,6 +57,7 @@ namespace Microsoft.NetCore.Analyzers.Runtime
                 INamedTypeSymbol conditionalAttributeSymbol = WellKnownTypes.ConditionalAttribute(compilationContext.Compilation);
                 INamedTypeSymbol systemConsoleSymbol = WellKnownTypes.Console(compilationContext.Compilation);
                 ImmutableHashSet<INamedTypeSymbol> typesToIgnore = GetTypesToIgnore(compilationContext.Compilation);
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationContext);
 
                 compilationContext.RegisterOperationBlockStartAction(operationBlockStartContext =>
                 {
@@ -161,12 +162,12 @@ namespace Microsoft.NetCore.Analyzers.Runtime
 
                     DataFlowAnalysisResult<ValueContentBlockAnalysisResult, ValueContentAbstractValue> ComputeValueContentAnalysisResult()
                     {
-                        var cfg = operationBlockStartContext.OperationBlocks.GetControlFlowGraph();
+                        var cfg = operationBlockStartContext.OperationBlocks.GetControlFlowGraph(compilationDataProvider);
                         if (cfg != null)
                         {
-                            var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(operationBlockStartContext.Compilation);
+                            var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
                             return ValueContentAnalysis.TryGetOrComputeResult(cfg, containingMethod, wellKnownTypeProvider,
-                                operationBlockStartContext.Options, Rule, operationBlockStartContext.CancellationToken);
+                                operationBlockStartContext.Options, compilationDataProvider, Rule, operationBlockStartContext.CancellationToken);
                         }
 
                         return null;

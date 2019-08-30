@@ -77,7 +77,8 @@ namespace Microsoft.NetCore.Analyzers.Runtime
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.RegisterCompilationStartAction(compilationContext =>
             {
-                if (!DisposeAnalysisHelper.TryGetOrCreate(compilationContext.Compilation, out DisposeAnalysisHelper disposeAnalysisHelper))
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationContext);
+                if (!DisposeAnalysisHelper.TryGetOrCreate(compilationDataProvider, out DisposeAnalysisHelper disposeAnalysisHelper))
                 {
                     return;
                 }
@@ -105,9 +106,9 @@ namespace Microsoft.NetCore.Analyzers.Runtime
                         null;
 
                     if (disposeAnalysisHelper.TryGetOrComputeResult(operationBlockContext.OperationBlocks, containingMethod,
-                        operationBlockContext.Options, NotDisposedRule, trackInstanceFields: false, trackExceptionPaths,
-                        operationBlockContext.CancellationToken, out var disposeAnalysisResult, out var pointsToAnalysisResult,
-                        interproceduralAnalysisPredicateOpt))
+                            operationBlockContext.Options, compilationDataProvider, NotDisposedRule, trackInstanceFields: false, trackExceptionPaths,
+                            operationBlockContext.CancellationToken, out var disposeAnalysisResult, out var pointsToAnalysisResult,
+                            interproceduralAnalysisPredicateOpt))
                     {
                         var notDisposedDiagnostics = ArrayBuilder<Diagnostic>.GetInstance();
                         var mayBeNotDisposedDiagnostics = ArrayBuilder<Diagnostic>.GetInstance();

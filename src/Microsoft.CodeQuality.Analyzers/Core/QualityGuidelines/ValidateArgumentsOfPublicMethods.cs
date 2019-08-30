@@ -39,6 +39,7 @@ namespace Microsoft.CodeQuality.Analyzers.QualityGuidelines
 
             context.RegisterCompilationStartAction(compilationContext =>
             {
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationContext);
                 compilationContext.RegisterOperationBlockAction(operationBlockContext =>
                 {
                     // Analyze externally visible methods with reference type parameters.
@@ -88,7 +89,7 @@ namespace Microsoft.CodeQuality.Analyzers.QualityGuidelines
                         if (operationBlock is IBlockOperation topmostBlock)
                         {
                             hazardousParameterUsages = ParameterValidationAnalysis.GetOrComputeHazardousParameterUsages(
-                                topmostBlock, operationBlockContext.Compilation, containingMethod,
+                                topmostBlock, compilationDataProvider, containingMethod,
                                 operationBlockContext.Options, Rule, operationBlockContext.CancellationToken);
                             break;
                         }

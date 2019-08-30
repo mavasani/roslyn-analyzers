@@ -81,7 +81,8 @@ namespace Microsoft.NetCore.Analyzers.Security
                     return;
                 }
 
-                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
                 compilationStartAnalysisContext.RegisterOperationAction(operationAnalysisContext =>
                 {
@@ -115,13 +116,14 @@ namespace Microsoft.NetCore.Analyzers.Security
                                     methodSymbol.Name));
                         }
                     }
-                    else if (invocationOperation.TryGetEnclosingControlFlowGraph(out var cfg))
+                    else if (invocationOperation.TryGetEnclosingControlFlowGraph(compilationDataProvider, out var cfg))
                     {
                         var valueContentResult = ValueContentAnalysis.TryGetOrComputeResult(
                             cfg,
                             operationAnalysisContext.ContainingSymbol,
                             operationAnalysisContext.Options,
                             wellKnownTypeProvider,
+                            compilationDataProvider,
                             InterproceduralAnalysisConfiguration.Create(
                                 operationAnalysisContext.Options,
                                 SupportedDiagnostics,

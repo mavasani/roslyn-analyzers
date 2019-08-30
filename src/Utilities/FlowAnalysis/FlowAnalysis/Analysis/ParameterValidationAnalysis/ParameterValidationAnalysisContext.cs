@@ -28,6 +28,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
             ControlFlowGraph controlFlowGraph,
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
+            CompilationDataProviderFactory compilationDataProviderFactory,
             SymbolNamesOption nullCheckValidationMethods,
             InterproceduralAnalysisConfiguration interproceduralAnalysisConfig,
             bool pessimisticAnalysis,
@@ -36,7 +37,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
             ControlFlowGraph parentControlFlowGraphOpt,
             InterproceduralParameterValidationAnalysisData interproceduralAnalysisDataOpt,
             bool trackHazardousParameterUsages)
-            : base(valueDomain, wellKnownTypeProvider, controlFlowGraph, owningSymbol, analyzerOptions, interproceduralAnalysisConfig,
+            : base(valueDomain, wellKnownTypeProvider, controlFlowGraph, owningSymbol, analyzerOptions, compilationDataProviderFactory, interproceduralAnalysisConfig,
                   pessimisticAnalysis, predicateAnalysis: false, exceptionPathsAnalysis: false,
                   copyAnalysisResultOpt: null, pointsToAnalysisResultOpt, valueContentAnalysisResultOpt: null,
                   tryGetOrComputeAnalysisResult, parentControlFlowGraphOpt, interproceduralAnalysisDataOpt,
@@ -52,6 +53,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
             ControlFlowGraph controlFlowGraph,
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
+            CompilationDataProviderFactory compilationDataProviderFactory,
             SymbolNamesOption nullCheckValidationMethods,
             InterproceduralAnalysisConfiguration interproceduralAnalysisConfig,
             bool pessimisticAnalysis,
@@ -60,7 +62,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
         {
             return new ParameterValidationAnalysisContext(
                 valueDomain, wellKnownTypeProvider, controlFlowGraph, owningSymbol,
-                analyzerOptions, nullCheckValidationMethods, interproceduralAnalysisConfig,
+                analyzerOptions, compilationDataProviderFactory, nullCheckValidationMethods, interproceduralAnalysisConfig,
                 pessimisticAnalysis, pointsToAnalysisResultOpt, tryGetOrComputeAnalysisResult, parentControlFlowGraphOpt: null,
                 interproceduralAnalysisDataOpt: null, trackHazardousParameterUsages: false);
         }
@@ -81,7 +83,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
             // Do not invoke any interprocedural analysis more than one level down.
             // We only care about analyzing validation methods.
             return new ParameterValidationAnalysisContext(
-                ValueDomain, WellKnownTypeProvider, invokedCfg, invokedMethod, AnalyzerOptions,
+                ValueDomain, WellKnownTypeProvider, invokedCfg, invokedMethod, AnalyzerOptions, CompilationDataProviderFactory,
                 NullCheckValidationMethodNames, InterproceduralAnalysisConfiguration,
                 PessimisticAnalysis, pointsToAnalysisResultOpt, TryGetOrComputeAnalysisResult, ControlFlowGraph,
                 interproceduralAnalysisData, TrackHazardousParameterUsages);
@@ -90,7 +92,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
         public ParameterValidationAnalysisContext WithTrackHazardousParameterUsages()
             => new ParameterValidationAnalysisContext(
                 ValueDomain, WellKnownTypeProvider, ControlFlowGraph,
-                OwningSymbol, AnalyzerOptions, NullCheckValidationMethodNames,
+                OwningSymbol, AnalyzerOptions, CompilationDataProviderFactory, NullCheckValidationMethodNames,
                 InterproceduralAnalysisConfiguration, PessimisticAnalysis,
                 PointsToAnalysisResultOpt, TryGetOrComputeAnalysisResult, ParentControlFlowGraphOpt,
                 InterproceduralAnalysisDataOpt, trackHazardousParameterUsages: true);

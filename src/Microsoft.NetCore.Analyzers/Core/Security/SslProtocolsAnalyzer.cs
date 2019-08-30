@@ -54,7 +54,8 @@ namespace Microsoft.NetCore.Analyzers.Security
             context.RegisterCompilationStartAction(
                 (CompilationStartAnalysisContext compilationStartAnalysisContext) =>
                 {
-                    WellKnownTypeProvider wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                    CompilationDataProvider compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                    WellKnownTypeProvider wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
                     if (!wellKnownTypeProvider.TryGetTypeByMetadataName(
                             WellKnownTypeNames.SystemSecurityAuthenticationSslProtocols,
                             out INamedTypeSymbol sslProtocolsSymbol))

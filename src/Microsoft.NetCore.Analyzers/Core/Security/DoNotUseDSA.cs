@@ -57,7 +57,8 @@ namespace Microsoft.NetCore.Analyzers.Security
 
             context.RegisterCompilationStartAction(compilationStartAnalysisContext =>
             {
-                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
                 wellKnownTypeProvider.TryGetTypeByMetadataName(
                     WellKnownTypeNames.SystemSecurityCryptographyDSA,

@@ -53,8 +53,8 @@ namespace Microsoft.NetCore.Analyzers.Security
 
             context.RegisterCompilationStartAction(compilationStartAnalysisContext =>
             {
-                var compilation = compilationStartAnalysisContext.Compilation;
-                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilation);
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
                 if (!wellKnownTypeProvider.TryGetTypeByMetadataName(WellKnownTypeNames.SystemRuntimeInteropServicesDllImportAttribute, out INamedTypeSymbol dllImportAttributeTypeSymbol) ||
                     !wellKnownTypeProvider.TryGetTypeByMetadataName(WellKnownTypeNames.SystemRuntimeInteropServicesDefaultDllImportSearchPathsAttribute, out INamedTypeSymbol defaultDllImportSearchPathsAttributeTypeSymbol))
@@ -68,7 +68,7 @@ namespace Microsoft.NetCore.Analyzers.Security
                     rule: DoNotUseUnsafeDllImportSearchPathRule,
                     defaultValue: UnsafeBits,
                     cancellationToken: cancellationToken);
-                var defaultDllImportSearchPathsAttributeOnAssembly = compilation.Assembly.GetAttributes().FirstOrDefault(o => o.AttributeClass.Equals(defaultDllImportSearchPathsAttributeTypeSymbol));
+                var defaultDllImportSearchPathsAttributeOnAssembly = compilationStartAnalysisContext.Compilation.Assembly.GetAttributes().FirstOrDefault(o => o.AttributeClass.Equals(defaultDllImportSearchPathsAttributeTypeSymbol));
 
                 compilationStartAnalysisContext.RegisterSymbolAction(symbolAnalysisContext =>
                 {

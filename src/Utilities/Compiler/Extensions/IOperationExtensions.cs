@@ -411,24 +411,29 @@ namespace Analyzer.Utilities.Extensions
         }
 
         /// <summary>
-        /// PERF: Cache from operation roots to their corresponding <see cref="ControlFlowGraph"/> to enable interprocedural flow analysis
-        /// across analyzers and analyzer callbacks to re-use the control flow graph.
+        /// Unique ID for TryGetEnclosingControlFlowGraph cache.
         /// </summary>
-        /// <remarks>Also see <see cref="IMethodSymbolExtensions.s_methodToTopmostOperationBlockCache"/></remarks>
-        private static readonly ConditionalWeakTable<Compilation, ConcurrentDictionary<IOperation, ControlFlowGraph>> s_operationToCfgCache
-            = new ConditionalWeakTable<Compilation, ConcurrentDictionary<IOperation, ControlFlowGraph>>();
+        private static readonly object s_tryGetEnclosingControlFlowGraphCacheId = new object();
 
-        public static bool TryGetEnclosingControlFlowGraph(this IOperation operation, out ControlFlowGraph cfg)
+        public static bool TryGetEnclosingControlFlowGraph(
+            this IOperation operation,
+            CompilationDataProvider compilationDataProvider,
+            out ControlFlowGraph cfg)
         {
             operation = operation.GetRoot();
-            var operationToCfgMap = s_operationToCfgCache.GetOrCreateValue(operation.SemanticModel.Compilation);
+
+            // PERF: Cache from operation roots to their corresponding <see cref="ControlFlowGraph"/> to enable interprocedural flow analysis
+            // across analyzers and analyzer callbacks to re-use the control flow graph.
+            var operationToCfgMap = compilationDataProvider.GetOrCreateValue<ConcurrentDictionary<IOperation, ControlFlowGraph>>(s_tryGetEnclosingControlFlowGraphCacheId);
             cfg = operationToCfgMap.GetOrAdd(operation, CreateControlFlowGraph);
             return cfg != null;
         }
 
-        public static ControlFlowGraph GetEnclosingControlFlowGraph(this IBlockOperation blockOperation)
+        public static ControlFlowGraph GetEnclosingControlFlowGraph(
+            this IBlockOperation blockOperation,
+            CompilationDataProvider compilationDataProvider)
         {
-            var success = blockOperation.TryGetEnclosingControlFlowGraph(out var cfg);
+            var success = blockOperation.TryGetEnclosingControlFlowGraph(compilationDataProvider, out var cfg);
             Debug.Assert(success);
             Debug.Assert(cfg != null);
             return cfg;

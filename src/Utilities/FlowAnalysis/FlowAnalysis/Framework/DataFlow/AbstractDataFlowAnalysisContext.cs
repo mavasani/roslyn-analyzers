@@ -28,6 +28,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             ControlFlowGraph controlFlowGraph,
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
+            CompilationDataProviderFactory compilationDataProviderFactory,
             InterproceduralAnalysisConfiguration interproceduralAnalysisConfig,
             bool pessimisticAnalysis,
             bool predicateAnalysis,
@@ -48,6 +49,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
                 owningSymbol.Kind == SymbolKind.Event);
             Debug.Assert(Equals(owningSymbol.OriginalDefinition, owningSymbol));
             Debug.Assert(wellKnownTypeProvider != null);
+            Debug.Assert(compilationDataProviderFactory != null);
             Debug.Assert(tryGetOrComputeAnalysisResult != null);
 
             ValueDomain = valueDomain;
@@ -66,6 +68,10 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             TryGetOrComputeAnalysisResult = tryGetOrComputeAnalysisResult;
             InterproceduralAnalysisDataOpt = interproceduralAnalysisDataOpt;
             InterproceduralAnalysisPredicateOpt = interproceduralAnalysisPredicateOpt;
+
+            // PERF: Make sure that we store the cloned factory onto the field to avoid strongly holding
+            // onto any CompilationDataProvider which might be created from the given input factory.
+            CompilationDataProviderFactory = compilationDataProviderFactory.Clone();
         }
 
         public AbstractValueDomain<TAbstractAnalysisValue> ValueDomain { get; }
@@ -81,6 +87,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         public PointsToAnalysisResult PointsToAnalysisResultOpt { get; }
         public ValueContentAnalysisResult ValueContentAnalysisResultOpt { get; }
 
+        public CompilationDataProviderFactory CompilationDataProviderFactory { get; }
         public Func<TAnalysisContext, TAnalysisResult> TryGetOrComputeAnalysisResult { get; }
         protected ControlFlowGraph ParentControlFlowGraphOpt { get; }
 

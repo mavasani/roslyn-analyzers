@@ -51,7 +51,8 @@ namespace Microsoft.NetCore.Analyzers.Security
             context.RegisterCompilationStartAction(compilationStartAnalysisContext =>
             {
                 var compilation = compilationStartAnalysisContext.Compilation;
-                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
                 if (!wellKnownTypeProvider.TryGetTypeByMetadataName(WellKnownTypeNames.SystemWebUIPage, out var pageTypeSymbol) ||
                     !wellKnownTypeProvider.TryGetTypeByMetadataName(WellKnownTypeNames.SystemEventArgs, out var eventArgsTypeSymbol))
@@ -92,7 +93,7 @@ namespace Microsoft.NetCore.Analyzers.Security
 
                 bool SetViewStateUserKeyCorrectly(IMethodSymbol methodSymbol)
                 {
-                    return methodSymbol?.GetTopmostOperationBlock(compilation)
+                    return methodSymbol?.GetTopmostOperationBlock(compilationDataProvider)
                                         .Descendants()
                                         .Any(s => s is ISimpleAssignmentOperation simpleAssignmentOperation &&
                                                     simpleAssignmentOperation.Target is IPropertyReferenceOperation propertyReferenceOperation &&

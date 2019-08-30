@@ -53,7 +53,7 @@ namespace Microsoft.NetCore.Analyzers.Runtime
         private static readonly LocalizableString s_localizableMessageReserved = new LocalizableResourceString(nameof(MicrosoftNetCoreAnalyzersResources.DoNotRaiseReservedExceptionTypesMessageReserved), MicrosoftNetCoreAnalyzersResources.ResourceManager, typeof(MicrosoftNetCoreAnalyzersResources));
         private static readonly LocalizableString s_localizableDescription = new LocalizableResourceString(nameof(MicrosoftNetCoreAnalyzersResources.DoNotRaiseReservedExceptionTypesDescription), MicrosoftNetCoreAnalyzersResources.ResourceManager, typeof(MicrosoftNetCoreAnalyzersResources));
 
-        internal static DiagnosticDescriptor TooGenericRule = new DiagnosticDescriptor(RuleId,
+        private readonly DiagnosticDescriptor TooGenericRule = new DiagnosticDescriptor(RuleId,
                                                                              s_localizableTitle,
                                                                              s_localizableMessageTooGeneric,
                                                                              DiagnosticCategory.Usage,
@@ -62,7 +62,7 @@ namespace Microsoft.NetCore.Analyzers.Runtime
                                                                              description: s_localizableDescription,
                                                                              helpLinkUri: "https://docs.microsoft.com/visualstudio/code-quality/ca2201-do-not-raise-reserved-exception-types",
                                                                              customTags: FxCopWellKnownDiagnosticTags.PortedFxCopRule);
-        internal static DiagnosticDescriptor ReservedRule = new DiagnosticDescriptor(RuleId,
+        private readonly DiagnosticDescriptor ReservedRule = new DiagnosticDescriptor(RuleId,
                                                                              s_localizableTitle,
                                                                              s_localizableMessageReserved,
                                                                              DiagnosticCategory.Usage,
@@ -72,7 +72,7 @@ namespace Microsoft.NetCore.Analyzers.Runtime
                                                                              helpLinkUri: "https://docs.microsoft.com/visualstudio/code-quality/ca2201-do-not-raise-reserved-exception-types",
                                                                              customTags: FxCopWellKnownDiagnosticTags.PortedFxCopRule);
 
-        private static readonly SymbolDisplayFormat s_symbolDisplayFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
+        private readonly SymbolDisplayFormat s_symbolDisplayFormat = new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(TooGenericRule, ReservedRule);
 

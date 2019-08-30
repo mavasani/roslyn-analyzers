@@ -53,6 +53,7 @@ namespace Microsoft.CodeQuality.Analyzers.Maintainability
 
             context.RegisterCompilationStartAction(compilationContext =>
             {
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationContext);
                 compilationContext.RegisterOperationBlockAction(operationBlockContext =>
                 {
                     var owningSymbol = operationBlockContext.OwningSymbol;
@@ -84,10 +85,12 @@ namespace Microsoft.CodeQuality.Analyzers.Maintainability
                             }
 
                             var cfg = operationBlockContext.GetControlFlowGraph(operationRoot);
-                            var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(operationBlockContext.Compilation);
-                            var valueContentAnalysisResult = ValueContentAnalysis.TryGetOrComputeResult(cfg, owningSymbol, wellKnownTypeProvider,
-                                    operationBlockContext.Options, AlwaysTrueFalseOrNullRule, operationBlockContext.CancellationToken,
-                                    out var copyAnalysisResultOpt, out var pointsToAnalysisResult);
+                            var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
+                            var valueContentAnalysisResult = ValueContentAnalysis.TryGetOrComputeResult(
+                                cfg, owningSymbol, wellKnownTypeProvider,
+                                operationBlockContext.Options, compilationDataProvider,
+                                AlwaysTrueFalseOrNullRule, operationBlockContext.CancellationToken,
+                                out var copyAnalysisResultOpt, out var pointsToAnalysisResult);
                             if (valueContentAnalysisResult == null)
                             {
                                 continue;

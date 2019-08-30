@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 
@@ -408,24 +407,24 @@ namespace Analyzer.Utilities.Extensions
 
 #if HAS_IOPERATION
         /// <summary>
-        /// PERF: Cache from method symbols to their topmost block operations to enable interprocedural flow analysis
-        /// across analyzers and analyzer callbacks to re-use the operations, semanticModel and control flow graph.
+        /// Unique ID for GetTopmostOperationBlock cache.
         /// </summary>
-        /// <remarks>Also see <see cref="IOperationExtensions.s_operationToCfgCache"/></remarks>
-        private static readonly ConditionalWeakTable<Compilation, ConcurrentDictionary<IMethodSymbol, IBlockOperation>> s_methodToTopmostOperationBlockCache
-            = new ConditionalWeakTable<Compilation, ConcurrentDictionary<IMethodSymbol, IBlockOperation>>();
+        private static readonly object s_getTopmostOperationBlockCacheId = new object();
 
         /// <summary>
         /// Returns the topmost <see cref="IBlockOperation"/> for given <paramref name="method"/>.
         /// </summary>
-        public static IBlockOperation GetTopmostOperationBlock(this IMethodSymbol method, Compilation compilation, CancellationToken cancellationToken = default)
+        public static IBlockOperation GetTopmostOperationBlock(this IMethodSymbol method, CompilationDataProvider compilationDataProvider, CancellationToken cancellationToken = default)
         {
-            var methodToBlockMap = s_methodToTopmostOperationBlockCache.GetOrCreateValue(compilation);
+            // PERF: Cache from method symbols to their topmost block operations to enable interprocedural flow analysis
+            // across analyzers and analyzer callbacks to re-use the operations, semanticModel and control flow graph.
+            var methodToBlockMap = compilationDataProvider.GetOrCreateValue<ConcurrentDictionary<IMethodSymbol, IBlockOperation>>(s_getTopmostOperationBlockCacheId);
             return methodToBlockMap.GetOrAdd(method, ComputeTopmostOperationBlock);
 
             // Local functions.
             IBlockOperation ComputeTopmostOperationBlock(IMethodSymbol unused)
             {
+                var compilation = compilationDataProvider.Compilation;
                 if (!Equals(method.ContainingAssembly, compilation.Assembly))
                 {
                     return null;

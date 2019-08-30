@@ -2,6 +2,7 @@
 
 using System.Collections.Immutable;
 using System.Linq;
+using Analyzer.Utilities;
 using Analyzer.Utilities.Extensions;
 using Analyzer.Utilities.FlowAnalysis.Analysis.TaintedDataAnalysis;
 using Analyzer.Utilities.PooledObjects;
@@ -47,7 +48,8 @@ namespace Microsoft.NetCore.Analyzers.Security
             context.RegisterCompilationStartAction(
                 (CompilationStartAnalysisContext compilationContext) =>
                 {
-                    TaintedDataConfig taintedDataConfig = TaintedDataConfig.GetOrCreate(compilationContext.Compilation);
+                    var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationContext);
+                    TaintedDataConfig taintedDataConfig = TaintedDataConfig.GetOrCreate(compilationDataProvider);
                     TaintedDataSymbolMap<SourceInfo> sourceInfoSymbolMap = taintedDataConfig.GetSourceSymbolMap(this.SinkKind);
                     if (sourceInfoSymbolMap.IsEmpty)
                     {
@@ -101,7 +103,7 @@ namespace Microsoft.NetCore.Analyzers.Security
                                             out evaluateWithValueContentAnalysis))
                                         {
                                             IOperation rootOperation = operationAnalysisContext.Operation.GetRoot();
-                                            if (!rootOperation.TryGetEnclosingControlFlowGraph(out var cfg))
+                                            if (!rootOperation.TryGetEnclosingControlFlowGraph(compilationDataProvider, out var cfg))
                                             {
                                                 return;
                                             }
@@ -114,7 +116,8 @@ namespace Microsoft.NetCore.Analyzers.Security
                                                     cfg,
                                                     owningSymbol,
                                                     operationAnalysisContext.Options,
-                                                    WellKnownTypeProvider.GetOrCreate(operationAnalysisContext.Compilation),
+                                                    WellKnownTypeProvider.GetOrCreate(compilationDataProvider),
+                                                    compilationDataProvider,
                                                     InterproceduralAnalysisConfiguration.Create(
                                                         operationAnalysisContext.Options,
                                                         SupportedDiagnostics,
@@ -144,7 +147,8 @@ namespace Microsoft.NetCore.Analyzers.Security
                                                     cfg,
                                                     owningSymbol,
                                                     operationAnalysisContext.Options,
-                                                    WellKnownTypeProvider.GetOrCreate(operationAnalysisContext.Compilation),
+                                                    WellKnownTypeProvider.GetOrCreate(compilationDataProvider),
+                                                    compilationDataProvider,
                                                     InterproceduralAnalysisConfiguration.Create(
                                                         operationAnalysisContext.Options,
                                                         SupportedDiagnostics,
@@ -218,14 +222,14 @@ namespace Microsoft.NetCore.Analyzers.Security
 
                                             foreach (IOperation rootOperation in rootOperationsNeedingAnalysis)
                                             {
-                                                if (!rootOperation.TryGetEnclosingControlFlowGraph(out var cfg))
+                                                if (!rootOperation.TryGetEnclosingControlFlowGraph(compilationDataProvider, out var cfg))
                                                 {
                                                     continue;
                                                 }
 
                                                 TaintedDataAnalysisResult taintedDataAnalysisResult = TaintedDataAnalysis.TryGetOrComputeResult(
                                                     cfg,
-                                                    operationBlockAnalysisContext.Compilation,
+                                                    compilationDataProvider,
                                                     operationBlockAnalysisContext.OwningSymbol,
                                                     operationBlockAnalysisContext.Options,
                                                     TaintedDataEnteringSinkDescriptor,

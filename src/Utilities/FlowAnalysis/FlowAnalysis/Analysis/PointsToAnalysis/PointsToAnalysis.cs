@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System.Diagnostics;
+using Analyzer.Utilities;
 using Analyzer.Utilities.Extensions;
 using Microsoft.CodeAnalysis.Diagnostics;
 
@@ -27,6 +28,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
             WellKnownTypeProvider wellKnownTypeProvider,
+            CompilationDataProvider compilationDataProvider,
             InterproceduralAnalysisConfiguration interproceduralAnalysisConfig,
             InterproceduralAnalysisPredicate interproceduralAnalysisPredicateOpt,
             bool pessimisticAnalysis = true,
@@ -34,7 +36,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis
             bool exceptionPathsAnalysis = false)
         {
             return TryGetOrComputeResult(cfg, owningSymbol, analyzerOptions, wellKnownTypeProvider,
-                out var _, interproceduralAnalysisConfig, interproceduralAnalysisPredicateOpt,
+                compilationDataProvider, interproceduralAnalysisConfig, interproceduralAnalysisPredicateOpt, out var _,
                 pessimisticAnalysis, performCopyAnalysis, exceptionPathsAnalysis);
         }
 
@@ -43,16 +45,17 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
             WellKnownTypeProvider wellKnownTypeProvider,
-            out CopyAnalysisResult copyAnalysisResultOpt,
+            CompilationDataProvider compilationDataProvider,
             InterproceduralAnalysisConfiguration interproceduralAnalysisConfig,
             InterproceduralAnalysisPredicate interproceduralAnalysisPredicateOpt,
+            out CopyAnalysisResult copyAnalysisResultOpt,
             bool pessimisticAnalysis = true,
             bool performCopyAnalysis = false,
             bool exceptionPathsAnalysis = false)
         {
             copyAnalysisResultOpt = performCopyAnalysis ?
-                CopyAnalysis.CopyAnalysis.TryGetOrComputeResult(cfg, owningSymbol, analyzerOptions, wellKnownTypeProvider, interproceduralAnalysisConfig,
-                    interproceduralAnalysisPredicateOpt, pessimisticAnalysis, performPointsToAnalysis: true, exceptionPathsAnalysis) :
+                CopyAnalysis.CopyAnalysis.TryGetOrComputeResult(cfg, owningSymbol, analyzerOptions, wellKnownTypeProvider, compilationDataProvider,
+                    interproceduralAnalysisConfig, interproceduralAnalysisPredicateOpt, pessimisticAnalysis, performPointsToAnalysis: true, exceptionPathsAnalysis) :
                 null;
 
             if (cfg == null)
@@ -62,7 +65,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.PointsToAnalysis
             }
 
             var analysisContext = PointsToAnalysisContext.Create(PointsToAbstractValueDomain.Default, wellKnownTypeProvider, cfg,
-                owningSymbol, analyzerOptions, interproceduralAnalysisConfig, pessimisticAnalysis, exceptionPathsAnalysis, copyAnalysisResultOpt,
+                owningSymbol, analyzerOptions, compilationDataProvider.Factory, interproceduralAnalysisConfig, pessimisticAnalysis, exceptionPathsAnalysis, copyAnalysisResultOpt,
                 TryGetOrComputeResultForAnalysisContext, interproceduralAnalysisPredicateOpt);
             return TryGetOrComputeResultForAnalysisContext(analysisContext);
         }

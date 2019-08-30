@@ -44,7 +44,8 @@ namespace Microsoft.NetCore.Analyzers.Runtime
 
             context.RegisterCompilationStartAction(compilationContext =>
             {
-                if (!DisposeAnalysisHelper.TryGetOrCreate(compilationContext.Compilation, out DisposeAnalysisHelper disposeAnalysisHelper))
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationContext);
+                if (!DisposeAnalysisHelper.TryGetOrCreate(compilationDataProvider, out DisposeAnalysisHelper disposeAnalysisHelper))
                 {
                     return;
                 }
@@ -121,12 +122,13 @@ namespace Microsoft.NetCore.Analyzers.Runtime
                             {
                                 if (lazyPointsToAnalysisResult == null)
                                 {
-                                    var cfg = operationBlockStartContext.OperationBlocks.GetControlFlowGraph();
-                                    var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(operationContext.Compilation);
+                                    var cfg = operationBlockStartContext.OperationBlocks.GetControlFlowGraph(compilationDataProvider);
+                                    var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
                                     var interproceduralAnalysisConfig = InterproceduralAnalysisConfiguration.Create(
                                         operationBlockStartContext.Options, Rule, InterproceduralAnalysisKind.None, operationBlockStartContext.CancellationToken);
                                     var pointsToAnalysisResult = PointsToAnalysis.TryGetOrComputeResult(cfg,
-                                        containingMethod, operationBlockStartContext.Options, wellKnownTypeProvider, interproceduralAnalysisConfig,
+                                        containingMethod, operationBlockStartContext.Options, wellKnownTypeProvider,
+                                        compilationDataProvider, interproceduralAnalysisConfig,
                                         interproceduralAnalysisPredicateOpt: null,
                                         pessimisticAnalysis: false, performCopyAnalysis: false);
                                     if (pointsToAnalysisResult == null)
@@ -159,8 +161,9 @@ namespace Microsoft.NetCore.Analyzers.Runtime
                         if (!disposableFields.IsEmpty)
                         {
                             if (disposeAnalysisHelper.TryGetOrComputeResult(operationBlockStartContext.OperationBlocks, containingMethod,
-                                operationBlockStartContext.Options, Rule, trackInstanceFields: true, trackExceptionPaths: false, cancellationToken: operationBlockStartContext.CancellationToken,
-                                disposeAnalysisResult: out var disposeAnalysisResult, pointsToAnalysisResult: out var pointsToAnalysisResult))
+                                    operationBlockStartContext.Options, compilationDataProvider, Rule, trackInstanceFields: true,
+                                    trackExceptionPaths: false, cancellationToken: operationBlockStartContext.CancellationToken,
+                                    disposeAnalysisResult: out var disposeAnalysisResult, pointsToAnalysisResult: out var pointsToAnalysisResult))
                             {
                                 BasicBlock exitBlock = disposeAnalysisResult.ControlFlowGraph.GetExit();
                                 foreach (var fieldWithPointsToValue in disposeAnalysisResult.TrackedInstanceFieldPointsToMap)

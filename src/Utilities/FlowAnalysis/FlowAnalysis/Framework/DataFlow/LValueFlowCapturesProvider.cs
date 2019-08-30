@@ -46,7 +46,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             {
                 foreach (var captureId in lvalueFlowCaptureIdBuilder)
                 {
-                    Debug.Assert(!rvalueFlowCaptureIds.Contains(captureId), "Flow capture used as both an r-value and an l-value?");
+                    //Debug.Assert(!rvalueFlowCaptureIds.Contains(captureId), "Flow capture used as both an r-value and an l-value?");
                 }
             }
 #endif

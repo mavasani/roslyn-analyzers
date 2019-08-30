@@ -46,7 +46,8 @@ namespace Microsoft.NetCore.Analyzers.Runtime
 
             context.RegisterCompilationStartAction(compilationContext =>
             {
-                if (!DisposeAnalysisHelper.TryGetOrCreate(compilationContext.Compilation, out DisposeAnalysisHelper disposeAnalysisHelper))
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationContext);
+                if (!DisposeAnalysisHelper.TryGetOrCreate(compilationDataProvider, out DisposeAnalysisHelper disposeAnalysisHelper))
                 {
                     return;
                 }

@@ -99,7 +99,8 @@ namespace Microsoft.NetCore.Analyzers.Security
                     return;
                 }
 
-                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
                 compilationStartAnalysisContext.RegisterOperationBlockStartAction(operationBlockStartContext =>
                 {
@@ -138,7 +139,7 @@ namespace Microsoft.NetCore.Analyzers.Security
 
                                 if (argumentOperation != null)
                                 {
-                                    var cfg = invocationOperation.GetTopmostParentBlock()?.GetEnclosingControlFlowGraph();
+                                    var cfg = invocationOperation.GetTopmostParentBlock()?.GetEnclosingControlFlowGraph(compilationDataProvider);
                                     if (cfg != null)
                                     {
                                         var interproceduralAnalysisConfig = InterproceduralAnalysisConfiguration.Create(
@@ -152,6 +153,7 @@ namespace Microsoft.NetCore.Analyzers.Security
                                                                         owningSymbol,
                                                                         operationBlockStartContext.Options,
                                                                         wellKnownTypeProvider,
+                                                                        compilationDataProvider,
                                                                         interproceduralAnalysisConfig,
                                                                         interproceduralAnalysisPredicateOpt: null,
                                                                         false);

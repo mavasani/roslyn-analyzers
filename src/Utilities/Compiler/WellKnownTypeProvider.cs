@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Runtime.CompilerServices;
 using Analyzer.Utilities;
 using Analyzer.Utilities.PooledObjects;
 
@@ -14,10 +13,10 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
     /// </summary>
     public class WellKnownTypeProvider
     {
-        private static readonly ConditionalWeakTable<Compilation, WellKnownTypeProvider> s_providerCache =
-            new ConditionalWeakTable<Compilation, WellKnownTypeProvider>();
-        private static readonly ConditionalWeakTable<Compilation, WellKnownTypeProvider>.CreateValueCallback s_ProviderCacheCallback =
-            new ConditionalWeakTable<Compilation, WellKnownTypeProvider>.CreateValueCallback(compilation => new WellKnownTypeProvider(compilation));
+        /// <summary>
+        /// Unique ID for <see cref="WellKnownTypeProvider"/> cache.
+        /// </summary>
+        private static readonly object s_wellKnownTypeProviderCacheId = new object();
 
         private WellKnownTypeProvider(Compilation compilation)
         {
@@ -35,7 +34,14 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
             GenericIEquatable = GetTypeByMetadataName(WellKnownTypeNames.SystemIEquatable1);
         }
 
-        public static WellKnownTypeProvider GetOrCreate(Compilation compilation) => s_providerCache.GetValue(compilation, s_ProviderCacheCallback);
+        public static WellKnownTypeProvider GetOrCreate(CompilationDataProvider compilationDataProvider)
+        {
+            return compilationDataProvider.GetOrCreateValue(CreateWellKnownTypeProvider, s_wellKnownTypeProviderCacheId);
+
+            // Local functions
+            static WellKnownTypeProvider CreateWellKnownTypeProvider(Compilation compilation)
+                => new WellKnownTypeProvider(compilation);
+        }
 
         public Compilation Compilation { get; }
 

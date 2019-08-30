@@ -26,7 +26,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.TaintedDataAnalysis
 
         internal static TaintedDataAnalysisResult TryGetOrComputeResult(
             ControlFlowGraph cfg,
-            Compilation compilation,
+            CompilationDataProvider compilationDataProvider,
             ISymbol containingMethod,
             AnalyzerOptions analyzerOptions,
             DiagnosticDescriptor rule,
@@ -37,13 +37,13 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.TaintedDataAnalysis
         {
             var interproceduralAnalysisConfig = InterproceduralAnalysisConfiguration.Create(
                 analyzerOptions, rule, InterproceduralAnalysisKind.ContextSensitive, cancellationToken);
-            return TryGetOrComputeResult(cfg, compilation, containingMethod, analyzerOptions, taintedSourceInfos,
+            return TryGetOrComputeResult(cfg, compilationDataProvider, containingMethod, analyzerOptions, taintedSourceInfos,
                 taintedSanitizerInfos, taintedSinkInfos, interproceduralAnalysisConfig);
         }
 
         private static TaintedDataAnalysisResult TryGetOrComputeResult(
             ControlFlowGraph cfg,
-            Compilation compilation,
+            CompilationDataProvider compilationDataProvider,
             ISymbol containingMethod,
             AnalyzerOptions analyzerOptions,
             TaintedDataSymbolMap<SourceInfo> taintedSourceInfos,
@@ -57,7 +57,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.TaintedDataAnalysis
                 return null;
             }
 
-            WellKnownTypeProvider wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilation);
+            WellKnownTypeProvider wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
             ValueContentAnalysisResult valueContentAnalysisResult = null;
             CopyAnalysisResult copyAnalysisResult = null;
             PointsToAnalysisResult pointsToAnalysisResult = null;
@@ -68,6 +68,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.TaintedDataAnalysis
                         containingMethod,
                         analyzerOptions,
                         wellKnownTypeProvider,
+                        compilationDataProvider,
                         interproceduralAnalysisConfig,
                         out copyAnalysisResult,
                         out pointsToAnalysisResult,
@@ -85,6 +86,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.TaintedDataAnalysis
                 containingMethod,
                 analyzerOptions,
                 wellKnownTypeProvider,
+                compilationDataProvider,
                 interproceduralAnalysisConfig,
                 interproceduralAnalysisPredicateOpt: null,
                 pessimisticAnalysis: true,
@@ -101,6 +103,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.TaintedDataAnalysis
                 cfg,
                 containingMethod,
                 analyzerOptions,
+                compilationDataProvider.Factory,
                 interproceduralAnalysisConfig,
                 pessimisticAnalysis: false,
                 copyAnalysisResultOpt: copyAnalysisResult,

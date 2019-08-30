@@ -21,8 +21,10 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         where TAnalysisResult : DataFlowAnalysisResult<TBlockAnalysisResult, TAbstractAnalysisValue>
         where TBlockAnalysisResult : AbstractBlockAnalysisResult
     {
-        private static readonly ConditionalWeakTable<IOperation, SingleThreadedConcurrentDictionary<TAnalysisContext, TAnalysisResult>> s_resultCache =
-            new ConditionalWeakTable<IOperation, SingleThreadedConcurrentDictionary<TAnalysisContext, TAnalysisResult>>();
+        /// <summary>
+        /// Unique ID for dataflow analysis results cache.
+        /// </summary>
+        private static readonly object s_resultsCacheId = new object();
 
         protected DataFlowAnalysis(AbstractAnalysisDomain<TAnalysisData> analysisDomain, DataFlowOperationVisitor<TAnalysisData, TAnalysisContext, TAnalysisResult, TAbstractAnalysisValue> operationVisitor)
         {
@@ -46,7 +48,8 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
                 return Run(analysisContext);
             }
 
-            var analysisResultsMap = s_resultCache.GetOrCreateValue(analysisContext.ControlFlowGraph.OriginalOperation);
+            var analysisResultsPerOperationCache = OperationVisitor.CompilationDataProvider.GetOrCreateValue<ConditionalWeakTable<IOperation, SingleThreadedConcurrentDictionary<TAnalysisContext, TAnalysisResult>>>(s_resultsCacheId);
+            var analysisResultsMap = analysisResultsPerOperationCache.GetOrCreateValue(analysisContext.ControlFlowGraph.OriginalOperation);
             return analysisResultsMap.GetOrAdd(analysisContext, _ => Run(analysisContext));
         }
 

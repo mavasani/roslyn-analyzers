@@ -3,7 +3,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Analyzer.Utilities.Extensions;
 using Analyzer.Utilities.PooledObjects;
@@ -28,10 +27,6 @@ namespace Analyzer.Utilities
                 "System.IO.TextWriter",
                 "System.Resources.IResourceReader",
             };
-        private static readonly ConditionalWeakTable<Compilation, DisposeAnalysisHelper> s_DisposeHelperCache =
-            new ConditionalWeakTable<Compilation, DisposeAnalysisHelper>();
-        private static readonly ConditionalWeakTable<Compilation, DisposeAnalysisHelper>.CreateValueCallback s_DisposeHelperCacheCallback =
-            new ConditionalWeakTable<Compilation, DisposeAnalysisHelper>.CreateValueCallback(compilation => new DisposeAnalysisHelper(compilation));
 
         private static readonly ImmutableHashSet<OperationKind> s_DisposableCreationKinds = ImmutableHashSet.Create(
             OperationKind.ObjectCreation,
@@ -39,18 +34,23 @@ namespace Analyzer.Utilities
             OperationKind.DynamicObjectCreation,
             OperationKind.Invocation);
 
+        /// <summary>
+        /// Unique ID for <see cref="DisposeAnalysisHelper"/> cache.
+        /// </summary>
+        private static readonly object s_disposeAnalysisHelperCacheId = new object();
+
         private readonly WellKnownTypeProvider _wellKnownTypeProvider;
         private readonly ImmutableHashSet<INamedTypeSymbol> _disposeOwnershipTransferLikelyTypes;
         private ConcurrentDictionary<INamedTypeSymbol, ImmutableHashSet<IFieldSymbol>> _lazyDisposableFieldsMap;
         public INamedTypeSymbol IDisposable => _wellKnownTypeProvider.IDisposable;
         public INamedTypeSymbol Task => _wellKnownTypeProvider.Task;
 
-        private DisposeAnalysisHelper(Compilation compilation)
+        private DisposeAnalysisHelper(WellKnownTypeProvider wellKnownTypeProvider)
         {
-            _wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilation);
+            _wellKnownTypeProvider = wellKnownTypeProvider;
             if (IDisposable != null)
             {
-                _disposeOwnershipTransferLikelyTypes = GetDisposeOwnershipTransferLikelyTypes(compilation);
+                _disposeOwnershipTransferLikelyTypes = GetDisposeOwnershipTransferLikelyTypes(wellKnownTypeProvider.Compilation);
             }
         }
 
@@ -77,9 +77,10 @@ namespace Analyzer.Utilities
             }
         }
 
-        public static bool TryGetOrCreate(Compilation compilation, out DisposeAnalysisHelper disposeHelper)
+        public static bool TryGetOrCreate(CompilationDataProvider compilationDataProvider, out DisposeAnalysisHelper disposeHelper)
         {
-            disposeHelper = s_DisposeHelperCache.GetValue(compilation, s_DisposeHelperCacheCallback);
+            var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
+            disposeHelper = compilationDataProvider.GetOrCreateValue(CreateDisposeAnalysisHelper, s_disposeAnalysisHelperCacheId);
             if (disposeHelper.IDisposable == null)
             {
                 disposeHelper = null;
@@ -87,12 +88,17 @@ namespace Analyzer.Utilities
             }
 
             return true;
+
+            // Local functions.
+            DisposeAnalysisHelper CreateDisposeAnalysisHelper(Compilation _)
+                => new DisposeAnalysisHelper(wellKnownTypeProvider);
         }
 
         public bool TryGetOrComputeResult(
             ImmutableArray<IOperation> operationBlocks,
             IMethodSymbol containingMethod,
             AnalyzerOptions analyzerOptions,
+            CompilationDataProvider compilationDataProvider,
             DiagnosticDescriptor rule,
             bool trackInstanceFields,
             bool trackExceptionPaths,
@@ -102,11 +108,11 @@ namespace Analyzer.Utilities
             InterproceduralAnalysisPredicate interproceduralAnalysisPredicateOpt = null,
             bool defaultDisposeOwnershipTransferAtConstructor = false)
         {
-            var cfg = operationBlocks.GetControlFlowGraph();
+            var cfg = operationBlocks.GetControlFlowGraph(compilationDataProvider);
             if (cfg != null)
             {
                 disposeAnalysisResult = DisposeAnalysis.TryGetOrComputeResult(cfg, containingMethod, _wellKnownTypeProvider,
-                    analyzerOptions, rule, _disposeOwnershipTransferLikelyTypes, trackInstanceFields,
+                    analyzerOptions, compilationDataProvider, rule, _disposeOwnershipTransferLikelyTypes, trackInstanceFields,
                     trackExceptionPaths, cancellationToken, out pointsToAnalysisResult,
                     interproceduralAnalysisPredicateOpt: interproceduralAnalysisPredicateOpt,
                     defaultDisposeOwnershipTransferAtConstructor: defaultDisposeOwnershipTransferAtConstructor);

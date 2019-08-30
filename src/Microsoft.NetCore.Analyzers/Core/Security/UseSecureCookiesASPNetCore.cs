@@ -88,7 +88,8 @@ namespace Microsoft.NetCore.Analyzers.Security
             context.RegisterCompilationStartAction(
                 (CompilationStartAnalysisContext compilationStartAnalysisContext) =>
                 {
-                    var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                    var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                    var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
                     if (!wellKnownTypeProvider.TryGetTypeByMetadataName(
                             WellKnownTypeNames.MicrosoftAspNetCoreHttpIResponseCookies,
@@ -172,7 +173,7 @@ namespace Microsoft.NetCore.Analyzers.Security
                                     }
 
                                     allResults = PropertySetAnalysis.BatchGetOrComputeHazardousUsages(
-                                        compilationAnalysisContext.Compilation,
+                                        compilationDataProvider,
                                         rootOperationsNeedingAnalysis,
                                         compilationAnalysisContext.Options,
                                         WellKnownTypeNames.MicrosoftAspNetCoreHttpCookieOptions,

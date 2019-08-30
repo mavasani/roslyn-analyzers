@@ -28,7 +28,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
 
         public static ImmutableDictionary<IParameterSymbol, SyntaxNode> GetOrComputeHazardousParameterUsages(
             IBlockOperation topmostBlock,
-            Compilation compilation,
+            CompilationDataProvider compilationDataProvider,
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
             DiagnosticDescriptor rule,
@@ -37,19 +37,20 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
             uint defaultMaxInterproceduralMethodCallChain = 1, // By default, we only want to track method calls one level down.
             bool pessimisticAnalysis = true)
         {
+            var compilation = compilationDataProvider.Compilation;
             Debug.Assert(!owningSymbol.IsConfiguredToSkipAnalysis(analyzerOptions, rule, compilation, cancellationToken));
 
             var interproceduralAnalysisConfig = InterproceduralAnalysisConfiguration.Create(
                    analyzerOptions, rule, interproceduralAnalysisKind, cancellationToken, defaultMaxInterproceduralMethodCallChain);
             var performCopyAnalysis = analyzerOptions.GetCopyAnalysisOption(rule, defaultValue: false, cancellationToken);
             var nullCheckValidationMethods = analyzerOptions.GetNullCheckValidationMethodsOption(rule, compilation, cancellationToken);
-            return GetOrComputeHazardousParameterUsages(topmostBlock, compilation, owningSymbol, analyzerOptions,
+            return GetOrComputeHazardousParameterUsages(topmostBlock, compilationDataProvider, owningSymbol, analyzerOptions,
                 nullCheckValidationMethods, interproceduralAnalysisConfig, performCopyAnalysis, pessimisticAnalysis);
         }
 
         private static ImmutableDictionary<IParameterSymbol, SyntaxNode> GetOrComputeHazardousParameterUsages(
             IBlockOperation topmostBlock,
-            Compilation compilation,
+            CompilationDataProvider compilationDataProvider,
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
             SymbolNamesOption nullCheckValidationMethods,
@@ -59,13 +60,13 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
         {
             Debug.Assert(topmostBlock != null);
 
-            var cfg = topmostBlock.GetEnclosingControlFlowGraph();
-            var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilation);
+            var cfg = topmostBlock.GetEnclosingControlFlowGraph(compilationDataProvider);
+            var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
             var pointsToAnalysisResult = PointsToAnalysis.PointsToAnalysis.TryGetOrComputeResult(cfg, owningSymbol, analyzerOptions, wellKnownTypeProvider,
-                interproceduralAnalysisConfig, interproceduralAnalysisPredicateOpt: null, pessimisticAnalysis, performCopyAnalysis);
+                compilationDataProvider, interproceduralAnalysisConfig, interproceduralAnalysisPredicateOpt: null, pessimisticAnalysis, performCopyAnalysis);
             if (pointsToAnalysisResult != null)
             {
-                var result = TryGetOrComputeResult(cfg, owningSymbol, analyzerOptions, wellKnownTypeProvider,
+                var result = TryGetOrComputeResult(cfg, owningSymbol, analyzerOptions, wellKnownTypeProvider, compilationDataProvider,
                     nullCheckValidationMethods, interproceduralAnalysisConfig, pessimisticAnalysis, pointsToAnalysisResult);
                 if (result != null)
                 {
@@ -81,6 +82,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
             WellKnownTypeProvider wellKnownTypeProvider,
+            CompilationDataProvider compilationDataProvider,
             SymbolNamesOption nullCheckValidationMethods,
             InterproceduralAnalysisConfiguration interproceduralAnalysisConfig,
             bool pessimisticAnalysis,
@@ -89,7 +91,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.ParameterValidationAnalys
             Debug.Assert(pointsToAnalysisResult != null);
 
             var analysisContext = ParameterValidationAnalysisContext.Create(ParameterValidationAbstractValueDomain.Default,
-                wellKnownTypeProvider, cfg, owningSymbol, analyzerOptions, nullCheckValidationMethods, interproceduralAnalysisConfig,
+                wellKnownTypeProvider, cfg, owningSymbol, analyzerOptions, compilationDataProvider.Factory, nullCheckValidationMethods, interproceduralAnalysisConfig,
                 pessimisticAnalysis, pointsToAnalysisResult, TryGetOrComputeResultForAnalysisContext);
             return TryGetOrComputeResultForAnalysisContext(analysisContext);
         }

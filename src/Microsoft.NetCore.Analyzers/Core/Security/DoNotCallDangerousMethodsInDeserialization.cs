@@ -64,8 +64,8 @@ namespace Microsoft.NetCore.Analyzers.Security
             context.RegisterCompilationStartAction(
                 (CompilationStartAnalysisContext compilationStartAnalysisContext) =>
                 {
-                    var compilation = compilationStartAnalysisContext.Compilation;
-                    var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                    var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                    var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
                     if (!wellKnownTypeProvider.TryGetTypeByMetadataName(
                         WellKnownTypeNames.SystemSerializableAttribute,
@@ -205,7 +205,7 @@ namespace Microsoft.NetCore.Analyzers.Security
                                     && parameters.Length == 1
                                     && parameters[0].Type.Equals(streamingContextTypeSymbol);
                                 var flagImplementOnDeserializationMethod = methodSymbol.IsOnDeserializationImplementation(IDeserializationCallbackTypeSymbol);
-                                var flagImplementDisposeMethod = methodSymbol.IsDisposeImplementation(compilation);
+                                var flagImplementDisposeMethod = methodSymbol.IsDisposeImplementation(compilationStartAnalysisContext.Compilation);
                                 var flagIsFinalizer = methodSymbol.IsFinalizer();
 
                                 if (!flagSerializable || !flagHasDeserializeAttributes && !flagImplementOnDeserializationMethod && !flagImplementDisposeMethod && !flagIsFinalizer)

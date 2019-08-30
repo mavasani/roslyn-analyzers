@@ -114,7 +114,8 @@ namespace Microsoft.NetCore.Analyzers.Security
             context.RegisterCompilationStartAction(
                 (CompilationStartAnalysisContext compilationStartAnalysisContext) =>
                 {
-                    WellKnownTypeProvider wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                    CompilationDataProvider compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                    WellKnownTypeProvider wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
                     if (!wellKnownTypeProvider.TryGetTypeByMetadataName(
                             WellKnownTypeNames.NewtonsoftJsonJsonSerializer,
                             out INamedTypeSymbol jsonSerializerSymbol))
@@ -193,7 +194,7 @@ namespace Microsoft.NetCore.Analyzers.Security
                                     }
 
                                     allResults = PropertySetAnalysis.BatchGetOrComputeHazardousUsages(
-                                        compilationAnalysisContext.Compilation,
+                                        compilationDataProvider,
                                         rootOperationsNeedingAnalysis,
                                         compilationAnalysisContext.Options,
                                         WellKnownTypeNames.NewtonsoftJsonJsonSerializer,

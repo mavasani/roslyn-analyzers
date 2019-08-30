@@ -29,6 +29,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.DisposeAnalysis
             ControlFlowGraph controlFlowGraph,
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
+            CompilationDataProviderFactory compilationDataProviderFactory,
             InterproceduralAnalysisConfiguration interproceduralAnalysisConfig,
             bool pessimisticAnalysis,
             bool exceptionPathsAnalysis,
@@ -42,7 +43,8 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.DisposeAnalysis
             InterproceduralDisposeAnalysisData interproceduralAnalysisDataOpt,
             InterproceduralAnalysisPredicate interproceduralAnalysisPredicateOpt)
             : base(valueDomain, wellKnownTypeProvider, controlFlowGraph,
-                  owningSymbol, analyzerOptions, interproceduralAnalysisConfig, pessimisticAnalysis,
+                  owningSymbol, analyzerOptions, compilationDataProviderFactory,
+                  interproceduralAnalysisConfig, pessimisticAnalysis,
                   predicateAnalysis: false,
                   exceptionPathsAnalysis,
                   copyAnalysisResultOpt: null,
@@ -65,6 +67,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.DisposeAnalysis
             ControlFlowGraph controlFlowGraph,
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
+            CompilationDataProviderFactory compilationDataProviderFactory,
             InterproceduralAnalysisConfiguration interproceduralAnalysisConfig,
             InterproceduralAnalysisPredicate interproceduralAnalysisPredicateOpt,
             bool pessimisticAnalysis,
@@ -78,7 +81,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.DisposeAnalysis
         {
             return new DisposeAnalysisContext(
                 valueDomain, wellKnownTypeProvider, controlFlowGraph,
-                owningSymbol, analyzerOptions, interproceduralAnalysisConfig, pessimisticAnalysis,
+                owningSymbol, analyzerOptions, compilationDataProviderFactory, interproceduralAnalysisConfig, pessimisticAnalysis,
                 exceptionPathsAnalysis, pointsToAnalysisResultOpt, tryGetOrComputeAnalysisResult,
                 disposeOwnershipTransferLikelyTypes, disposeOwnershipTransferAtConstructor, disposeOwnershipTransferAtMethodCall,
                 trackInstanceFields, parentControlFlowGraphOpt: null, interproceduralAnalysisDataOpt: null,
@@ -98,7 +101,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow.DisposeAnalysis
             Debug.Assert(copyAnalysisResultOpt == null);
             Debug.Assert(valueContentAnalysisResultOpt == null);
 
-            return new DisposeAnalysisContext(ValueDomain, WellKnownTypeProvider, invokedControlFlowGraph, invokedMethod, AnalyzerOptions, InterproceduralAnalysisConfiguration, PessimisticAnalysis,
+            return new DisposeAnalysisContext(ValueDomain, WellKnownTypeProvider, invokedControlFlowGraph, invokedMethod, AnalyzerOptions, CompilationDataProviderFactory, InterproceduralAnalysisConfiguration, PessimisticAnalysis,
                 ExceptionPathsAnalysis, pointsToAnalysisResultOpt, TryGetOrComputeAnalysisResult, DisposeOwnershipTransferLikelyTypes, DisposeOwnershipTransferAtConstructor,
                 DisposeOwnershipTransferAtMethodCall, TrackInstanceFields, ControlFlowGraph, interproceduralAnalysisData, InterproceduralAnalysisPredicateOpt);
         }

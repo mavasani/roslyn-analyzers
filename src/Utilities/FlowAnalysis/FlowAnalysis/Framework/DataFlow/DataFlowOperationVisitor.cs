@@ -107,6 +107,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         internal Dictionary<PointsToAbstractValue, TAbstractAnalysisValue> TaskWrappedValuesMapOpt { get; private set; }
 
         protected TAnalysisContext DataFlowAnalysisContext { get; }
+        public CompilationDataProvider CompilationDataProvider { get; }
         public AbstractValueDomain<TAbstractAnalysisValue> ValueDomain => DataFlowAnalysisContext.ValueDomain;
         protected ISymbol OwningSymbol => DataFlowAnalysisContext.OwningSymbol;
         protected WellKnownTypeProvider WellKnownTypeProvider => DataFlowAnalysisContext.WellKnownTypeProvider;
@@ -180,6 +181,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
         protected DataFlowOperationVisitor(TAnalysisContext analysisContext)
         {
             DataFlowAnalysisContext = analysisContext;
+            CompilationDataProvider = analysisContext.CompilationDataProviderFactory.CreateProvider();
 
             _lValueFlowCaptures = LValueFlowCapturesProvider.GetOrCreateLValueFlowCaptures(analysisContext.ControlFlowGraph);
             _valueCacheBuilder = ImmutableDictionary.CreateBuilder<IOperation, TAbstractAnalysisValue>();
@@ -2996,8 +2998,8 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
 
             if (!_interproceduralMethodToCfgMapOpt.TryGetValue(method, out var cfg))
             {
-                var operation = method.GetTopmostOperationBlock(WellKnownTypeProvider.Compilation);
-                cfg = operation?.GetEnclosingControlFlowGraph();
+                var operation = method.GetTopmostOperationBlock(CompilationDataProvider);
+                cfg = operation?.GetEnclosingControlFlowGraph(CompilationDataProvider);
                 _interproceduralMethodToCfgMapOpt.Add(method, cfg);
             }
 

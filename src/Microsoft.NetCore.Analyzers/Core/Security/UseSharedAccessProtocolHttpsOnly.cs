@@ -73,7 +73,8 @@ namespace Microsoft.NetCore.Analyzers.Security
                     return;
                 }
 
-                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
                 wellKnownTypeProvider.TryGetTypeByMetadataName(
                     WellKnownTypeNames.MicrosoftWindowsAzureStorageCloudStorageAccount,
@@ -134,7 +135,7 @@ namespace Microsoft.NetCore.Analyzers.Security
 
                             if (protocolsArgumentOperation != null)
                             {
-                                var cfg = invocationOperation.GetTopmostParentBlock()?.GetEnclosingControlFlowGraph();
+                                var cfg = invocationOperation.GetTopmostParentBlock()?.GetEnclosingControlFlowGraph(compilationDataProvider);
                                 if (cfg != null)
                                 {
                                     var interproceduralAnalysisConfig = InterproceduralAnalysisConfiguration.Create(
@@ -148,6 +149,7 @@ namespace Microsoft.NetCore.Analyzers.Security
                                                                                                 owningSymbol,
                                                                                                 operationAnalysisContext.Options,
                                                                                                 wellKnownTypeProvider,
+                                                                                                compilationDataProvider,
                                                                                                 interproceduralAnalysisConfig,
                                                                                                 out var copyAnalysisResult,
                                                                                                 out var pointsToAnalysisResult);

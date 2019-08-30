@@ -75,7 +75,8 @@ namespace Microsoft.NetCore.Analyzers.Security
             context.RegisterCompilationStartAction(
                 (CompilationStartAnalysisContext compilationStartAnalysisContext) =>
                 {
-                    var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                    var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                    var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
                     if (!wellKnownTypeProvider.TryGetTypeByMetadataName(WellKnownTypeNames.SystemSecurityCryptographyRfc2898DeriveBytes, out var rfc2898DeriveBytesTypeSymbol))
                     {
@@ -173,7 +174,7 @@ namespace Microsoft.NetCore.Analyzers.Security
                                     }
 
                                     allResults = PropertySetAnalysis.BatchGetOrComputeHazardousUsages(
-                                        compilationAnalysisContext.Compilation,
+                                        compilationDataProvider,
                                         rootOperationsNeedingAnalysis,
                                         compilationAnalysisContext.Options,
                                         WellKnownTypeNames.SystemSecurityCryptographyRfc2898DeriveBytes,

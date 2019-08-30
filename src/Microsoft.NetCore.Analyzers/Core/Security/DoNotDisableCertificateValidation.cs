@@ -66,6 +66,8 @@ namespace Microsoft.NetCore.Analyzers.Security
                         return;
                     }
 
+                    var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+
                     compilationStartAnalysisContext.RegisterOperationAction(
                         (OperationAnalysisContext operationAnalysisContext) =>
                         {
@@ -106,7 +108,7 @@ namespace Microsoft.NetCore.Analyzers.Security
                                             return;
                                         }
 
-                                        var blockOperation = methodSymbol.GetTopmostOperationBlock(compilation);
+                                        var blockOperation = methodSymbol.GetTopmostOperationBlock(compilationDataProvider);
 
                                         if (blockOperation == null)
                                         {

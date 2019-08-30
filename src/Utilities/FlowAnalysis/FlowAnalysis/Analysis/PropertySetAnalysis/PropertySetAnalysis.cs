@@ -34,7 +34,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.PropertySetAnalysis
         /// Analyzers should use <see cref="BatchGetOrComputeHazardousUsages"/> instead.  Gets hazardous usages of an object based on a set of its properties.
         /// </summary>
         /// <param name="cfg">Control flow graph of the code.</param>
-        /// <param name="compilation">Compilation containing the code.</param>
+        /// <param name="compilationDataProvider">CompilationDataProvider for storing compilation wide data.</param>
         /// <param name="owningSymbol">Symbol of the code to examine.</param>
         /// <param name="typeToTrackMetadataName">Name of the type to track.</param>
         /// <param name="constructorMapper">How constructor invocations map to <see cref="PropertySetAbstractValueKind"/>s.</param>
@@ -45,7 +45,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.PropertySetAnalysis
         /// <returns>Property set analysis result.</returns>
         internal static PropertySetAnalysisResult GetOrComputeResult(
             ControlFlowGraph cfg,
-            Compilation compilation,
+            CompilationDataProvider compilationDataProvider,
             ISymbol owningSymbol,
             AnalyzerOptions analyzerOptions,
             string typeToTrackMetadataName,
@@ -72,7 +72,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.PropertySetAnalysis
 
             constructorMapper.Validate(propertyMappers.PropertyValuesCount);
 
-            var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilation);
+            var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
             PointsToAnalysisResult pointsToAnalysisResult;
             ValueContentAnalysisResult valueContentAnalysisResultOpt;
@@ -83,6 +83,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.PropertySetAnalysis
                     owningSymbol,
                     analyzerOptions,
                     wellKnownTypeProvider,
+                    compilationDataProvider,
                     interproceduralAnalysisConfig,
                     interproceduralAnalysisPredicateOpt: null,
                     pessimisticAnalysis,
@@ -101,6 +102,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.PropertySetAnalysis
                     owningSymbol,
                     analyzerOptions,
                     wellKnownTypeProvider,
+                    compilationDataProvider,
                     interproceduralAnalysisConfig,
                     out var copyAnalysisResult,
                     out pointsToAnalysisResult,
@@ -118,6 +120,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.PropertySetAnalysis
                 cfg,
                 owningSymbol,
                 analyzerOptions,
+                compilationDataProvider.Factory,
                 interproceduralAnalysisConfig,
                 pessimisticAnalysis,
                 pointsToAnalysisResult,
@@ -134,7 +137,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.PropertySetAnalysis
         /// <summary>
         /// Gets hazardous usages of an object based on a set of its properties.
         /// </summary>
-        /// <param name="compilation">Compilation containing the code.</param>
+        /// <param name="compilationDataProvider">Factory for creating <see cref="CompilationDataProvider{TCompilationData}"/> instances for storing compilation wide data.</param>
         /// <param name="rootOperationsNeedingAnalysis">Root operations of code blocks to analyze.</param>
         /// <param name="typeToTrackMetadataName">Name of the type to track.</param>
         /// <param name="constructorMapper">How constructor invocations map to <see cref="PropertySetAbstractValueKind"/>s.</param>
@@ -145,7 +148,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.PropertySetAnalysis
         /// <returns>Dictionary of <see cref="Location"/> and <see cref="IMethodSymbol"/> pairs mapping to the kind of hazardous usage (Flagged or MaybeFlagged).  The method in the key is null for return/initialization statements.</returns>
         /// <remarks>Unlike <see cref="GetOrComputeResult"/>, this overload also performs DFA on all descendant local and anonymous functions.</remarks>
         public static PooledDictionary<(Location Location, IMethodSymbol Method), HazardousUsageEvaluationResult> BatchGetOrComputeHazardousUsages(
-            Compilation compilation,
+            CompilationDataProvider compilationDataProvider,
             IEnumerable<(IOperation Operation, ISymbol ContainingSymbol)> rootOperationsNeedingAnalysis,
             AnalyzerOptions analyzerOptions,
             string typeToTrackMetadataName,
@@ -158,7 +161,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.PropertySetAnalysis
             PooledDictionary<(Location Location, IMethodSymbol Method), HazardousUsageEvaluationResult> allResults = null;
             foreach ((IOperation Operation, ISymbol ContainingSymbol) in rootOperationsNeedingAnalysis)
             {
-                var success = Operation.TryGetEnclosingControlFlowGraph(out ControlFlowGraph enclosingControlFlowGraph);
+                var success = Operation.TryGetEnclosingControlFlowGraph(compilationDataProvider, out ControlFlowGraph enclosingControlFlowGraph);
                 Debug.Assert(success);
                 if (enclosingControlFlowGraph == null)
                 {
@@ -206,7 +209,7 @@ namespace Analyzer.Utilities.FlowAnalysis.Analysis.PropertySetAnalysis
                 PropertySetAnalysisResult propertySetAnalysisResult =
                     PropertySetAnalysis.GetOrComputeResult(
                         cfg,
-                        compilation,
+                        compilationDataProvider,
                         owningSymbol,
                         analyzerOptions,
                         typeToTrackMetadataName,

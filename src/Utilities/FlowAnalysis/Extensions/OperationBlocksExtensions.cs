@@ -9,14 +9,16 @@ namespace Analyzer.Utilities.Extensions
 {
     internal static partial class OperationBlocksExtensions
     {
-        public static ControlFlowGraph GetControlFlowGraph(this ImmutableArray<IOperation> operationBlocks)
+        public static ControlFlowGraph GetControlFlowGraph(
+            this ImmutableArray<IOperation> operationBlocks,
+            CompilationDataProvider compilationDataProvider)
         {
             foreach (var operationRoot in operationBlocks)
             {
                 IBlockOperation topmostBlock = operationRoot.GetTopmostParentBlock();
                 if (topmostBlock != null)
                 {
-                    return topmostBlock.GetEnclosingControlFlowGraph();
+                    return topmostBlock.GetEnclosingControlFlowGraph(compilationDataProvider);
                 }
             }
 

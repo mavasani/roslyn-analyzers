@@ -64,8 +64,8 @@ namespace Microsoft.NetCore.Analyzers.Security
 
             context.RegisterCompilationStartAction(compilationStartAnalysisContext =>
             {
-                var compilation = compilationStartAnalysisContext.Compilation;
-                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartAnalysisContext.Compilation);
+                var compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartAnalysisContext);
+                var wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
 
                 if (!wellKnownTypeProvider.TryGetTypeByMetadataName(WellKnownTypeNames.MicrosoftAspNetCoreMvcFiltersFilterCollection, out var filterCollectionTypeSymbol) ||
                     !wellKnownTypeProvider.TryGetTypeByMetadataName(WellKnownTypeNames.MicrosoftAspNetCoreMvcController, out var controllerTypeSymbol) ||

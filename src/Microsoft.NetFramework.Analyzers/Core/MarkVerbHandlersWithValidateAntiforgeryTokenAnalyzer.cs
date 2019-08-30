@@ -100,7 +100,8 @@ namespace Microsoft.NetFramework.Analyzers
             analysisContext.RegisterCompilationStartAction(
                 (CompilationStartAnalysisContext compilationStartContext) =>
                 {
-                    WellKnownTypeProvider wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationStartContext.Compilation);
+                    CompilationDataProvider compilationDataProvider = CompilationDataProviderFactory.CreateProvider(compilationStartContext);
+                    WellKnownTypeProvider wellKnownTypeProvider = WellKnownTypeProvider.GetOrCreate(compilationDataProvider);
                     INamedTypeSymbol mvcControllerSymbol = WellKnownTypes.MvcController(compilationStartContext.Compilation);
                     INamedTypeSymbol mvcControllerBaseSymbol = WellKnownTypes.MvcControllerBase(compilationStartContext.Compilation);
                     INamedTypeSymbol actionResultSymbol = WellKnownTypes.ActionResult(compilationStartContext.Compilation);
