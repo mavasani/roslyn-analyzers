@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Threading;
 
 #pragma warning disable CA1000 // Do not declare static members on generic types
 
@@ -13,6 +14,7 @@ namespace Analyzer.Utilities.PooledObjects
     // Dictionary that can be recycled via an object pool
     // NOTE: these dictionaries always have the default comparer.
     internal sealed class PooledDictionary<K, V> : Dictionary<K, V>, IDisposable
+        where K : notnull
     {
         private readonly ObjectPool<PooledDictionary<K, V>>? _pool;
 
@@ -22,9 +24,9 @@ namespace Analyzer.Utilities.PooledObjects
             _pool = pool;
         }
 
-        public void Dispose() => Free();
+        public void Dispose() => Free(CancellationToken.None);
 
-        public ImmutableDictionary<K, V> ToImmutableDictionaryAndFree()
+        public ImmutableDictionary<K, V> ToImmutableDictionaryAndFree(CancellationToken cancellationToken = default)
         {
             ImmutableDictionary<K, V> result;
             if (Count == 0)
@@ -37,14 +39,41 @@ namespace Analyzer.Utilities.PooledObjects
                 this.Clear();
             }
 
-            _pool?.Free(this);
+            _pool?.Free(this, cancellationToken);
             return result;
         }
 
-        public void Free()
+        public ImmutableDictionary<TKey, TValue> ToImmutableDictionaryAndFree<TKey, TValue>(
+           Func<KeyValuePair<K, V>, TKey> keySelector, Func<KeyValuePair<K, V>, TValue> elementSelector,
+           IEqualityComparer<TKey> comparer,
+           CancellationToken cancellationToken = default)
         {
+            ImmutableDictionary<TKey, TValue> result;
+            if (Count == 0)
+            {
+                result = ImmutableDictionary<TKey, TValue>.Empty;
+            }
+            else
+            {
+                result = this.ToImmutableDictionary(keySelector, elementSelector, comparer);
+                this.Clear();
+            }
+
+            _pool?.Free(this, cancellationToken);
+            return result;
+        }
+
+        public void Free(CancellationToken cancellationToken)
+        {
+            // Workaround for https://github.com/dotnet/roslyn/issues/46859
+            // Do not free in presence of cancellation.
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
             this.Clear();
-            _pool?.Free(this);
+            _pool?.Free(this, cancellationToken);
         }
 
         // global pool

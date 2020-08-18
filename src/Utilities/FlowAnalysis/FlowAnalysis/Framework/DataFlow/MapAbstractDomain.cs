@@ -8,6 +8,7 @@ namespace Microsoft.CodeAnalysis.FlowAnalysis.DataFlow
     /// An abstract domain implementation for analyses that store dictionary typed data.
     /// </summary>
     public class MapAbstractDomain<TKey, TValue> : AbstractAnalysisDomain<DictionaryAnalysisData<TKey, TValue>>
+        
     {
         public MapAbstractDomain(AbstractValueDomain<TValue> valueDomain)
         {
