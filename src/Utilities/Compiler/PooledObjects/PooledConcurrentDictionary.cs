@@ -47,7 +47,7 @@ namespace Analyzer.Utilities.PooledObjects
         // global pool
         private static readonly ObjectPool<PooledConcurrentDictionary<K, V>> s_poolInstance = CreatePool();
         private static readonly ConcurrentDictionary<IEqualityComparer<K>, ObjectPool<PooledConcurrentDictionary<K, V>>> s_poolInstancesByComparer
-            = new ConcurrentDictionary<IEqualityComparer<K>, ObjectPool<PooledConcurrentDictionary<K, V>>>();
+            = new();
 
         // if someone needs to create a pool;
         public static ObjectPool<PooledConcurrentDictionary<K, V>> CreatePool(IEqualityComparer<K>? keyComparer = null)

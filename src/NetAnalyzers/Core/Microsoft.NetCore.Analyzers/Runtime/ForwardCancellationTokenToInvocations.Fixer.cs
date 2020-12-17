@@ -135,7 +135,7 @@ namespace Microsoft.NetCore.Analyzers.Runtime
                 case null:
                     newInstance = expression;
                     break;
-                case IConditionalAccessInstanceOperation _:
+                case IConditionalAccessInstanceOperation:
                     newInstance = GetConditionalOperationInvocationExpression(invocation.Syntax);
                     break;
                 default:

@@ -17,9 +17,9 @@ namespace Analyzer.Utilities
     {
         private readonly AnalyzerConfigOptions? _analyzerConfigOptions;
         private static readonly ConditionalWeakTable<ImmutableDictionary<string, string>, SyntaxTreeCategorizedAnalyzerConfigOptions> s_perTreeOptionsCache =
-            new ConditionalWeakTable<ImmutableDictionary<string, string>, SyntaxTreeCategorizedAnalyzerConfigOptions>();
+            new();
 
-        public static readonly SyntaxTreeCategorizedAnalyzerConfigOptions Empty = new SyntaxTreeCategorizedAnalyzerConfigOptions(analyzerConfigOptions: null);
+        public static readonly SyntaxTreeCategorizedAnalyzerConfigOptions Empty = new(analyzerConfigOptions: null);
 
         private SyntaxTreeCategorizedAnalyzerConfigOptions(AnalyzerConfigOptions? analyzerConfigOptions)
         {

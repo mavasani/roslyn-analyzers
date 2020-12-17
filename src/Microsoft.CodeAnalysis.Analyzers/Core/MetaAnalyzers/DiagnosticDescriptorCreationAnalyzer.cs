@@ -171,7 +171,7 @@ namespace Microsoft.CodeAnalysis.Analyzers.MetaAnalyzers
         /// <summary>
         /// RS1031 (<inheritdoc cref="CodeAnalysisDiagnosticsResources.DefineDiagnosticTitleCorrectlyTitle"/>)
         /// </summary>
-        public static readonly DiagnosticDescriptor DefineDiagnosticTitleCorrectlyRule = new DiagnosticDescriptor(
+        public static readonly DiagnosticDescriptor DefineDiagnosticTitleCorrectlyRule = new(
             DiagnosticIds.DefineDiagnosticTitleCorrectlyRuleId,
             s_localizableDefineDiagnosticTitleCorrectlyTitle,
             s_localizableDefineDiagnosticTitleCorrectlyMessage,
@@ -183,7 +183,7 @@ namespace Microsoft.CodeAnalysis.Analyzers.MetaAnalyzers
         /// <summary>
         /// RS1032 (<inheritdoc cref="CodeAnalysisDiagnosticsResources.DefineDiagnosticMessageCorrectlyTitle"/>)
         /// </summary>
-        public static readonly DiagnosticDescriptor DefineDiagnosticMessageCorrectlyRule = new DiagnosticDescriptor(
+        public static readonly DiagnosticDescriptor DefineDiagnosticMessageCorrectlyRule = new(
             DiagnosticIds.DefineDiagnosticMessageCorrectlyRuleId,
             s_localizableDefineDiagnosticMessageCorrectlyTitle,
             s_localizableDefineDiagnosticMessageCorrectlyMessage,
@@ -195,7 +195,7 @@ namespace Microsoft.CodeAnalysis.Analyzers.MetaAnalyzers
         /// <summary>
         /// RS1033 (<inheritdoc cref="CodeAnalysisDiagnosticsResources.DefineDiagnosticDescriptionCorrectlyTitle"/>)
         /// </summary>
-        public static readonly DiagnosticDescriptor DefineDiagnosticDescriptionCorrectlyRule = new DiagnosticDescriptor(
+        public static readonly DiagnosticDescriptor DefineDiagnosticDescriptionCorrectlyRule = new(
             DiagnosticIds.DefineDiagnosticDescriptionCorrectlyRuleId,
             s_localizableDefineDiagnosticDescriptionCorrectlyTitle,
             s_localizableDefineDiagnosticDescriptionCorrectlyMessage,
@@ -1050,7 +1050,8 @@ namespace Microsoft.CodeAnalysis.Analyzers.MetaAnalyzers
 
                         // Factory methods to track declaration locations for every analyzer rule ID.
                         ConcurrentBag<Location> AddLocationFactory(string analyzerName)
-                            => new ConcurrentBag<Location> { location };
+                            => new()
+                            { location };
 
                         ConcurrentBag<Location> UpdateLocationsFactory(string analyzerName, ConcurrentBag<Location> bag)
                         {

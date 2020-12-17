@@ -39,7 +39,7 @@ namespace Analyzer.Utilities
         public readonly IEqualityComparer<K> Comparer;
 
         // https://github.com/dotnet/roslyn/issues/40344
-        public static readonly SmallDictionary<K, V> Empty = new SmallDictionary<K, V>(null!);
+        public static readonly SmallDictionary<K, V> Empty = new(null!);
 
         public SmallDictionary() : this(EqualityComparer<K>.Default) { }
 
@@ -504,7 +504,7 @@ namespace Analyzer.Utilities
             }
         }
 
-        public KeyCollection Keys => new KeyCollection(this);
+        public KeyCollection Keys => new(this);
 
 #pragma warning disable CA1815 // Override equals and operator equals on value types
         internal struct KeyCollection : IEnumerable<K>
@@ -518,9 +518,9 @@ namespace Analyzer.Utilities
 
             public struct Enumerator
             {
-                private readonly Stack<AvlNode> _stack;
+                private readonly Stack<AvlNode>? _stack;
                 private Node? _next;
-                private Node _current;
+                private Node? _current;
 
                 public Enumerator(SmallDictionary<K, V> dict)
                     : this()
@@ -541,7 +541,7 @@ namespace Analyzer.Utilities
                     }
                 }
 
-                public K Current => _current.Key;
+                public K Current => _current!.Key;
 
                 public bool MoveNext()
                 {
@@ -569,6 +569,8 @@ namespace Analyzer.Utilities
 
                 private void PushIfNotNull(AvlNode? child)
                 {
+                    RoslynDebug.Assert(_stack != null);
+
                     if (child != null)
                     {
                         _stack.Push(child);
@@ -621,7 +623,7 @@ namespace Analyzer.Utilities
             }
         }
 
-        public ValueCollection Values => new ValueCollection(this);
+        public ValueCollection Values => new(this);
 
         internal struct ValueCollection : IEnumerable<V>
         {
@@ -634,9 +636,9 @@ namespace Analyzer.Utilities
 
             public struct Enumerator
             {
-                private readonly Stack<AvlNode> _stack;
+                private readonly Stack<AvlNode>? _stack;
                 private Node? _next;
-                private Node _current;
+                private Node? _current;
 
                 public Enumerator(SmallDictionary<K, V> dict)
                     : this()
@@ -659,7 +661,7 @@ namespace Analyzer.Utilities
                     }
                 }
 
-                public V Current => _current.Value;
+                public V Current => _current!.Value;
 
                 public bool MoveNext()
                 {
@@ -687,6 +689,8 @@ namespace Analyzer.Utilities
 
                 private void PushIfNotNull(AvlNode? child)
                 {
+                    RoslynDebug.Assert(_stack != null);
+
                     if (child != null)
                     {
                         _stack.Push(child);
@@ -740,9 +744,9 @@ namespace Analyzer.Utilities
 
         public struct Enumerator
         {
-            private readonly Stack<AvlNode> _stack;
+            private readonly Stack<AvlNode>? _stack;
             private Node? _next;
-            private Node _current;
+            private Node? _current;
 
             public Enumerator(SmallDictionary<K, V> dict)
                 : this()
@@ -765,7 +769,7 @@ namespace Analyzer.Utilities
                 }
             }
 
-            public KeyValuePair<K, V> Current => new KeyValuePair<K, V>(_current.Key, _current.Value);
+            public KeyValuePair<K, V> Current => new(_current!.Key, _current.Value);
 
             public bool MoveNext()
             {
@@ -793,6 +797,8 @@ namespace Analyzer.Utilities
 
             private void PushIfNotNull(AvlNode? child)
             {
+                RoslynDebug.Assert(_stack != null);
+
                 if (child != null)
                 {
                     _stack.Push(child);

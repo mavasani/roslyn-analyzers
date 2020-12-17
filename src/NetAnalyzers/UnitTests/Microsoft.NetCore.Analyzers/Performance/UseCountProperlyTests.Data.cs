@@ -60,7 +60,7 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        private static readonly List<OperatorKind> _operators = new List<OperatorKind>
+        private static readonly List<OperatorKind> _operators = new()
         {
             new OperatorKind((a, b) => a == b, 1, 2, BinaryOperatorKind.Equals),
             new OperatorKind((a, b) => a != b, 2, 2, BinaryOperatorKind.NotEquals),
