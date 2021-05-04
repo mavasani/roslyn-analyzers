@@ -28,6 +28,13 @@
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\PointsToAnalysis\PointsToAnalysisKind.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\PointsToAnalysis\PointsToAnalysisResult.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\PointsToAnalysis\TrackedEntitiesBuilder.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ReachingDefinitionsAnalysis\ReachingDefinitionsAbstractValueKind.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ReachingDefinitionsAnalysis\ReachingDefinitionsAbstractValue.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ReachingDefinitionsAnalysis\ReachingDefinitionsAnalysis.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ReachingDefinitionsAnalysis\ReachingDefinitionsAnalysis.ReachingDefinitionsAbstractDomain.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ReachingDefinitionsAnalysis\ReachingDefinitionsAnalysis.ReachingDefinitionsDataFlowOperationVisitor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ReachingDefinitionsAnalysis\ReachingDefinitionsAnalysisContext.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Analysis\ReachingDefinitionsAnalysis\ReachingDefinitionsBlockAnalysisResult.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Framework\DataFlow\AbstractAnalysisData.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Framework\DataFlow\LambdaAndLocalFunctionAnalysisInfo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)FlowAnalysis\Framework\DataFlow\PredicateAnalysisEntityDataFlowOperationVisitor.cs" />
